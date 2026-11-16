@@ -12,6 +12,10 @@ each sampled, nothing taken from the recording), moves on 5.6 s, and repeats. Wh
            the place (given, not sampled); the route and body are the model's; later rounds are its own choice.
            The person stays where they stood. 3 starting moments x B1_SEEDS seeds x B1_ROUNDS rounds.
 
+B2 (PROTOCOL_BEHAVIOUR.md, "B2"): with B2_PRIOR=places_prior.json (from b2_goal.py) and B2_W=0.5, each round of a
+heldout ("free") walk takes, with chance B2_W, a goal drawn from where the cat ended up in training, within reach
+of where it is now; otherwise the copy's own goal. Each walk records which (goal_src: "own" or "place" per round).
+
 Run from agent2sim/gdmdm with lab4d on PYTHONPATH:
   B1_OUT=dir B1_STARTS=...-heldout-L64-S10.pkl [B1_MODE=... B1_ROUNDS=12 B1_STARTS_N=8 B1_SEEDS=2 S1_SPOTS=...
       B1_SOURCE=... B1_NAME=rollouts] python b1_rollout.py --load_logname NAME --logname_gd b128 --eval_batch_size 1 \
@@ -103,6 +107,22 @@ def main():
                 for seed in range(seeds):
                     plans.append((i, seed, "free", {"rounds": rounds}))
     agent = Agent(model, starts, config, None, meta, agent_class=meta["agent_class"], record_grad=False)
+    prior = None
+    if os.environ.get("B2_PRIOR"):
+        pj = json.load(open(os.environ["B2_PRIOR"]))
+        dev = starts.x0.device
+        prior = {"cells": torch.tensor(pj["cells"], dtype=torch.float32, device=dev),
+                 "counts": torch.tensor(pj["counts"], dtype=torch.float32, device=dev),
+                 "cell": pj["cell_m"], "reach": pj["reach_m"], "w": float(os.environ.get("B2_W", 0.5))}
+        prior["centres"] = (prior["cells"] + 0.5) * prior["cell"]
+
+    def place_in_reach(pos):
+        """a world position where the cat ended up in training, within reach of pos (3,)"""
+        w = prior["counts"] * ((prior["centres"] - pos).norm(dim=-1) <= prior["reach"])
+        if not (w > 0).any():
+            w = prior["counts"]
+        k = torch.multinomial(w, 1)[0]
+        return (prior["cells"][k] + torch.rand(3, device=pos.device)) * prior["cell"]
 
     def r3(a):
         return np.round(np.asarray(a, dtype=np.float64), 3).tolist()
@@ -115,7 +135,7 @@ def main():
         past = (agent.data.past[0, :, 0] + to_world).cpu().numpy()
         past_joints = agent.data.past_joints[0].reshape(len(past), -1, 3).cpu().numpy()
         person = [(agent.data.cam[0, :, 0] + to_world).cpu().numpy()]  # the person during the past 0.8 s
-        pos, rot, jnt = [], [], []
+        pos, rot, jnt, src = [], [], [], []
         for r in range(ex["rounds"]):
             now = agent.data.x0_to_world  # (1,1,1,3): where the cat is now
             if kind == "spot":
@@ -133,8 +153,13 @@ def main():
             if kind == "call" and r == 0:  # the called place is this round's goal
                 agent.update_goal([ex["pos"].tolist()], replace_goal=True)
                 agent.data.x0_goal = agent.data.x0_goal.reshape(1, 1, 1, 3)
+            elif kind == "free" and prior is not None and float(torch.rand(1)) < prior["w"]:
+                agent.update_goal([place_in_reach(now[0, 0, 0]).tolist()], replace_goal=True)
+                agent.data.x0_goal = agent.data.x0_goal.reshape(1, 1, 1, 3)
+                src.append("place")
             else:
                 agent.update_goal([], replace_goal=True)
+                src.append("own")
             agent.update_waypoint(replace_wp=True)
             agent.update_fullbody()
             wp = agent.reverse_wp[-1, 0, 0, :, 0] + agent.data.x0_to_world[0, 0]  # (T,3) world
@@ -156,6 +181,8 @@ def main():
         run = {"kind": kind, "start_window": i, "seed": seed, "past": r3(past), "past_joints": r3(past_joints),
                "pos": r3(pos), "rot": r3(rot), "joints": r3(jnt), "person": r3(np.concatenate(person)),
                "observer": r3(person[0][-1])}
+        if kind == "free" and prior is not None:
+            run["goal_src"] = src
         if kind == "spot":
             run["spot"] = ex["spot"]
         if kind == "call":

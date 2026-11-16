@@ -173,3 +173,130 @@ reported as such. Full run submitted (job number in `logs/`).
 - On joint angles, Stay put (body unchanged) beats both the copy and Replay.
 - In the 6 example windows, the copy's 16 goals usually sit in one tight clump, so when the clump is in the
   wrong place all 16 are wrong; Replay's and the location prior's candidates spread wider.
+
+## B2: better goal choice (plan, written 2026-11-16 at 01:00, before anything was run)
+
+The user picked "Better goal choice" from three directions offered after B1. Why: in B1 the copy's goal
+(minDE 0.781 m) barely beat Replay (0.786) and lost to the location prior (0.752); its 16 goals usually sit
+in one tight clump; and in S2, removing the room barely changed whether goals land where the cat has been.
+
+**Change (at walk time; no retraining).** "Copy + places": each of the 16 goals is either the copy's own
+sampled goal or a place drawn from where the cat ended up in the training windows (the location prior's
+10 cm cells, weighted by count), restricted to places within reach: no farther from where the cat is now
+than the 99th percentile of goal distances in the training windows. Fixed now, not tuned on held-back
+windows: half and half (8 of 16 each; w = 0.5), the 99th percentile, the same cells as B1.
+
+**Measures, on the same held-back windows, 12 trials x 16 goals.**
+- goal minDE (B1's measure: the best of 16, metres);
+- energy score (a proper score for a set of guesses: mean distance from the guesses to the truth minus half
+  the mean distance between guesses; lower is better). Unlike best-of-16, it does not reward scattering
+  guesses for its own sake;
+- one-goal error: the mean distance of a single drawn goal from the truth (what one round of a walk uses).
+
+**Compared:** the old copy (w = 0; must reproduce B1's 0.781 within one trial-to-trial SD, as a check), the
+mix (w = 0.5), places within reach alone (w = 1), B1's location prior, Replay. Also w = 0.25 and 0.75, as
+context only.
+
+**Rule.** The mix passes if its goal minDE is lower than both the location prior's and Replay's, and its
+energy score is lower than the old copy's. Fixed wording besides: if places within reach alone beat the mix
+on both minDE and energy score, the result says "the copy's own goals add nothing beyond favourite places".
+
+**Then.** If the mix passes, the 16 free walks on the page are made again with it (each round: with chance
+0.5 a place within reach, otherwise the copy's own goal), and the note says so. The S1 and S2 walks keep the
+old goal choice, since their results were measured with it. One GPU job, goals only (about 30 minutes).
+
+## B2 result (2026-11-16, 08:05; job 12396014)
+
+The first run (job 12395993) crashed before scoring: Replay's nearest-moment lookup had its arguments swapped.
+Fixed (`nearest(features(test), features(train))`, as in B1) and run again unchanged otherwise. 260 held-back
+windows, 12 trials x 16 goals; reach = 3.05 m (99th percentile of training goal distances); every window had
+places in reach.
+
+| goals | minDE (m) | trial SD | energy score | one-goal error (m) |
+|---|---|---|---|---|
+| old copy (w = 0) | 0.782 | 0.0035 | 0.866 | 0.946 |
+| w = 0.25 (context) | 0.570 | 0.0128 | 0.715 | 1.185 |
+| **mix (w = 0.5, the rule)** | **0.497** | 0.0104 | **0.674** | 1.423 |
+| w = 0.75 (context) | 0.458 | 0.0102 | 0.742 | 1.660 |
+| places in reach alone (w = 1) | 0.622 | 0.0170 | 0.924 | 1.900 |
+| B1's location prior | 0.757 | 0.0180 | 1.370 | 2.817 |
+| Replay | 0.786 | - | 0.879 | 1.101 |
+
+Check: the old copy reproduces B1 (0.782 against 0.781; SD 0.0035).
+
+**By the rule: passes.** The mix's minDE (0.497) is below the location prior's (0.757) and Replay's
+(0.786), and its energy score (0.674) is below the old copy's (0.866). Places alone do worse than the mix on
+both, so the copy's own goals do add something. Reported without a rule:
+
+- The mix's best-of-16 beats the location prior in 73% of windows and the old copy in 67%.
+- The energy score is best at w = 0.5 of the five weights; minDE keeps falling to w = 0.75, as best-of-16
+  rewards spread.
+- One-goal error gets worse (1.42 m against 0.95 m): a single drawn goal is on average farther from where the
+  cat went, because half are spread-out places. The gain is in covering where the cat might go, not in any
+  one guess.
+- Walks (16 free walks made again with w = 0.5; 102 of 192 rounds went to a place), horizontal movement over
+  5.6 s, against the 19 real videos: real cat median 0.34 m (16% of stretches over 1.5 m); old walks 0.03 m
+  (1%); new walks 0.68 m (27%). Speed over 0.5 s, 99th percentile: real 0.67 m/s, new walks 0.62 m/s (max 0.86).
+  So the old copy barely moved and the new one moves somewhat more than the real cat, at real-cat speeds.
+  Rounds aimed at a place moved a median 1.38 m; the copy's own rounds 0.13 m.
+
+On the page as version 12 of Pikachu's Keep: the 16 free walks, a legend that says when the copy heads for
+one of the cat's usual spots, and a second paragraph in "The copy on its own". S1 and S2 walks unchanged.
+Scripts: `cluster/b2_goal.py`, `cluster/b1_rollout.py` (B2_PRIOR, B2_W), `cluster/run_b2.sbatch`.
+
+## B3: matching the walks' movement to the real cat (plan, written 2026-11-16 at 08:40, before running)
+
+The user said "Yes, tune it" to: pick how often the walks head for one of the cat's usual spots (B2's w) so
+that the walks move about as much as the real cat. This is a choice for the page's walks, made on training
+data only; B2's scored result stays as it is.
+
+**What the real cat does (17 training videos, from the page's recorded paths; videos 18-19 are the held-back
+pair).** Horizontal movement over 5.6 s, stretches starting every 1 s (800 stretches): mean 0.541 m,
+median 0.084 m, 35.0% over 0.5 m, 12.4% over 1.5 m. The cat is still most of the time and moves a lot when it
+moves, so the median mostly says how often it rests; the target is the **mean, 0.541 m**. (While choosing
+this I also printed the same numbers for the held-back pair, a much busier stretch of the cat's life: median
+0.968 m, mean 0.985 m. They are not used.)
+
+**Walks to choose from.** w = 0, 0.05, ..., 0.5 (11 values); for each, 16 walks of 12 rounds (8 starting
+moments spread over the training windows x 2 seeds), measured the same way (stretches every 1 s, the walk's
+own frames only).
+
+**Choice.** The w whose walks' mean movement is closest to 0.541 m; but if a smaller w comes within 0.027 m
+(5% of the target) of that best distance, the smallest such w (closer to the copy's own choice). Reported beside it: share over
+0.5 m and over 1.5 m against the real 35.0% and 12.4%.
+
+**Then.** The page's 16 free walks are made again from the same held-back starts with the chosen w. B2's
+scores at that w on the held-back windows are reported as context; if its goal minDE is not below both the
+location prior's and Replay's, the result says so.
+
+## B3 result (2026-11-16, 09:31; job 12396085, about 1 GPU-hour)
+
+Walks from training moments (16 per w), mean horizontal movement over 5.6 s against the real cat's 0.541 m in
+the 17 training videos:
+
+| w | mean (m) | over 0.5 m | over 1.5 m | rounds to a place |
+|---|---|---|---|---|
+| 0 | 0.232 | 17.7% | 1.7% | 0/192 |
+| 0.05 | 0.313 | 25.0% | 3.3% | 11 |
+| 0.1 | 0.361 | 28.5% | 4.7% | 18 |
+| 0.15 | 0.427 | 32.9% | 7.7% | 31 |
+| 0.2 | 0.489 | 37.8% | 8.6% | 39 |
+| **0.25 (picked)** | **0.559** | 42.0% | 10.7% | 47 |
+| 0.3 | 0.645 | 46.0% | 14.7% | 60 |
+| 0.35 | 0.752 | 52.2% | 18.2% | 73 |
+| 0.4 | 0.859 | 59.4% | 21.7% | 81 |
+| 0.45 | 0.868 | 60.8% | 21.2% | 87 |
+| 0.5 | 0.864 | 59.3% | 21.5% | 98 |
+| real cat (training videos) | 0.541 | 35.0% | 12.4% | - |
+
+**Picked: w = 0.25** (0.018 m from the target; w = 0.2 is 0.052 m away, outside the 0.027 m tie margin).
+The real shares fall between those at w = 0.2 and 0.25. Movement levels off above w = 0.4.
+
+At w = 0.25 on B2's held-back windows (context; computed with 4 of 16 goals from places): goal minDE 0.570,
+below the location prior's 0.757 and Replay's 0.786; energy score 0.715, below the old copy's 0.866. So it
+still beats both baselines and the old copy, a little less than w = 0.5 on both measures.
+
+Page (version 13 of Pikachu's Keep): the 16 free walks made again from the same held-back starts with
+w = 0.25 (50 of 192 rounds went to a place; mean movement 0.589 m on these starts, against 0.817 m at w = 0.5),
+and the note "The copy on its own" updated. S1 and S2 walks unchanged. Scripts: `cluster/b3_pick.py`,
+`cluster/run_b3.sbatch`.
