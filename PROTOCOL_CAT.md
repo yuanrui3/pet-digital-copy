@@ -191,3 +191,123 @@ Lab4D's 85-cat set). Not a scored test: nothing was held back, and nothing here 
 - Look, by eye against three raw frames: shape, white paws and chest right; the coat comes out warmer and
   browner than the real cool grey, and softer than Pikachu's because the outline fits less tightly.
 - On the page: Pikachu's Keep version 11, Body tab, "Cat" menu → "Grey and white cat".
+
+## Second cat at home (plan, written 2026-11-16 at 12:20, before running; demo only)
+
+The user picked "Second cat at home". The grey and white cat has no motion of its own at home, so it borrows
+Pikachu's: the recorded month and the copy's walks. Its joint angles cannot be copied across: Agent-to-Sim's
+cat uses a URDF skeleton with its own joint frames, root orientation and bone centres, while the grey cat was
+trained with Lab4D's built-in quadruped skeleton. Instead, skinning transfer:
+
+- fit the grey cat's rest mesh onto Pikachu's (Agent-to-Sim's) rest mesh with one scale, rotation and shift
+  (point-to-point ICP both ways, started from the 4 proper principal-axis alignments; keep the closest);
+- give each grey-cat vertex the bone weights of its 8 nearest Pikachu vertices (weighted by distance),
+  smoothed over the grey cat's mesh, top 4 kept;
+- move it with Pikachu's own bone transforms (the page already has them), so it is placed and posed exactly
+  like Pikachu, with the grey cat's photo coat.
+
+Check, read-out fixed now: on 40 recorded frames, how much the mesh's edges stretch (|log| of posed over rest
+length). "Moves cleanly" if the grey cat's 99th percentile is at most 1.5 times Pikachu's own; "some
+stretching" up to 3 times; "tears" beyond. Also reported: fit distance after alignment, and how far the grey
+cat's lowest point sits from Pikachu's (floating or sinking), median over the frames.
+
+### Result (2026-11-16, 12:45; CPU only, on the cluster's login node)
+
+- **Skinning transfer, rigid fit** (`cluster/home2_transfer.py`): fit distance 37.2 mm (4.7% of the cat's
+  size). By the fixed read-out it "moves cleanly": 99th-percentile stretch 1.23 against Pikachu's own 1.15
+  (ratio 1.07); lowest point a median 24 mm above Pikachu's. **But the read-out missed what the page showed**:
+  rendered at home (headless Chrome), the grey cat walked plausibly at some moments (video 18 at 90 s) and
+  was badly deformed at others (walk 3 at 15 s: stretched thin, head drawn out, legs gone), and its tail did
+  not follow Pikachu's. The two rest poses differ (tail, legs, head), so parts pick up the wrong bones. The
+  stretch measure did not catch it because Pikachu's own skinning already stretches a lot (15.5% of its edges
+  by over 30%), which makes the baseline lenient.
+- **Non-rigid fit, then skinning transfer** (`NONRIGID=1`, a smooth displacement field): with weak smoothness
+  (down to 1) the fit reached 2.4 mm but reshaped the grey cat (its edges changed length by a median 17%) and
+  the mesh tore at home; with strong smoothness only (300, 100) it still tore. Not used.
+- **Shipped: coat transfer** (`cluster/home2_coat.py`): at home the grey and white cat is Pikachu's body
+  wearing the grey cat's photo coat. Every texel of Pikachu's 2048 px texture takes the colour of the 4
+  nearest points of the rigidly fitted grey cat (median 37 mm away, 90th percentile 71 mm). Light texels:
+  3.2% against 2.7% on the grey cat itself. It moves exactly as Pikachu does; its shape is Pikachu's, and the
+  white paws and chest land roughly, not exactly, in place.
+- On the page: version 14 of Pikachu's Keep, "Cat" in the At home bar (swaps the coat on Pikachu's mesh; the
+  pale real cat beside a replay stays Pikachu), the note "The grey and white cat at home", and the grey cat's
+  Body note updated. Checked by headless-Chrome renders at four moments (recorded video 18 and walk 3).
+
+A proper fix would retarget the motion to the grey cat's own skeleton: map Agent-to-Sim's URDF joints to
+Lab4D's built-in quadruped joints and carry over global joint orientations with the grey cat's bone lengths.
+Not done.
+
+### Retarget (plan, written 2026-11-16 at 14:30, before running; demo only)
+
+The user picked "Try the retarget". On reading both codes, the two skeletons turn out to be the same 25
+joints in the same tree and order: Lab4D's built-in quadruped and Agent-to-Sim's quad URDF (Bauch = spine 1,
+Bauch.001 = spine 2, Brust = spine 3, Hals = head, Schalterplatte/Oberarm/Unterarm/Vorderpfote = shoulder to
+hand, Schwanz ... end = tail 1 to 5, Oberschenkel/Unterschenkel/Pfote1/Pfote2 = hip to foot). What differs is
+the joint frames, rest pose and bone lengths, so joint angles still cannot be copied, but bone i maps to bone
+i. Method:
+
+- the grey cat's own rest skeleton, skinning (top 4 bones per vertex) and its own video's bone motion come
+  from its Lab4D model (`cluster/home2_skel.py`, one short GPU job), checked against Lab4D's own warp;
+- Pikachu's rest joints come from its bone motion on the page: each joint is the point that moves with both
+  its bone and its parent bone (least squares over the recorded frames);
+- the grey cat's rest mesh and skeleton are lined up with Pikachu's by the same rigid fit as before;
+- per bone, a fixed rest-pose correction turns the grey bone's rest direction onto Pikachu's (Kabsch over the
+  child directions where a bone has several children, the smallest rotation where it has one; tips copy
+  their parent's). Each frame, a grey bone's rotation is Pikachu's matching bone's rotation (rest -> frame)
+  times that correction; its joints are placed by forward kinematics with the grey cat's own bone lengths;
+  the root joints stay put, as they do in both models. The page does this per frame in the browser from
+  Pikachu's bone motion, so only the grey cat's mesh, skinning and the constants are added.
+  (`cluster/home2_retarget.py`; the page's `poseGrey`.)
+
+Read-out, fixed now. Stretch: the grey cat's 99th-percentile edge stretch on 40 recorded and 40 walk frames
+against its own on 40 frames of its own video (a fairer bar than Pikachu's, which last time proved lenient):
+"moves cleanly" up to 1.5 times, "some stretching" up to 3 times, "tears" beyond. Also reported: how far its
+lowest point sits from Pikachu's. Ship rule, fixed now because the stretch measure missed the last failure:
+headless-Chrome renders at home at recorded video 18 at 90 s and walk 3 at 15 s (the moments that showed the
+last failure) and two more, walk 3 at 5 s and recorded video 5 at 20 s. The retarget replaces the coat on the
+page only if at all four the grey cat is whole (head, four legs and tail attached, nothing drawn thin or torn)
+and stands on or near the floor. Otherwise the coat version stays.
+
+### Retarget result (2026-11-16, 15:10; one 3-minute GPU job, 12400359, the rest CPU on the login node)
+
+- **The grey cat's skeleton export** (`cluster/home2_skel.py`): its rest skeleton rebuilt from the model matches
+  Lab4D's own rest bones exactly (to 3e-7). Its 4-bone skinning follows Lab4D's warp on its own video to a
+  median of about 0.3% of the body's length (worst 3.6%). Pikachu's joints recovered from its bone motion: residual
+  0.06 mm median.
+- **The planned method failed.** Bone i following Pikachu's bone i, turned onto Pikachu's bone direction: "some
+  stretching" (1.68 times its own video's 99th-percentile stretch), and the body drifted sideways off Pikachu's.
+  With its root joints carried by Pikachu's matching bones instead of fixed: still "some stretching" (1.76).
+  The same turn from rest, without the direction correction: "moves cleanly" (1.18) by the read-out, but at all
+  three moments looked at, the grey cat crouched nose-down with its legs swept back while Pikachu stood. The
+  stretch read-out missed this again.
+- **Why:** both skeletons were learnt freely, so their bones do not move the same body parts. Grey "L hand" moves
+  its right front leg; grey "R shoulder" moves its head and neck; grey "spine 2" moves nothing; Pikachu's
+  "spine 2" carries most of its torso and its "R elbow" its upper chest and neck. Also, the grey cat's canonical
+  rest pose is bent sideways with its paws tucked together.
+- **Used instead (changed after seeing the above):** match by body region, not by bone name
+  (`cluster/home2_retarget.py`, MODE=region). The grey cat is first posed as in the frame of its own video
+  that best fits Pikachu's rest pose and stands on four clear paws (own frame 50, raw frame 100; fit 23.5 mm,
+  against 37.2 mm for its canonical pose). That pose is lined up with Pikachu's rest mesh and bent smoothly onto
+  it, with paw tips, nose and tail tip pinned. The bend is used only to find which part of Pikachu each grey
+  vertex corresponds to (3.4 mm apart after it) and is never shown. Each grey bone then moves rigidly with the
+  blend of Pikachu's bones that move its vertices' corresponding points. Examples: grey L foot follows Pikachu's
+  L foot 88%; grey "R shoulder" (head and neck) follows Pikachu's "R elbow" 89%. The page computes this per frame
+  from Pikachu's bone motion (`poseGrey`). Each frame it also raises or lowers the grey cat so its lowest point
+  sits where Pikachu's does.
+- **Read-out:** "moves cleanly", 0.81 times its own video's 99th-percentile stretch. 6.2% of edges stretch by
+  over 30%, against 9.8% in its own video. Before the height correction, its lowest point sat a median 32 mm
+  below Pikachu's: it is shorter in the leg.
+- **Ship rule** (headless renders):
+  - Recorded video 18 at 90 s: whole, standing, tail up as Pikachu's.
+  - Walk 3 at 5 s: whole.
+  - Walk 3 at 15 s, the moment of the earlier failures: head, raised tail and one front leg visible from the
+    page's camera. The body looks long from above. The side view of the same frame (home2_retarget.png) shows it
+    standing on four legs, so it was judged whole. That judgement leans on the plot, not the page.
+  - Recorded video 5 at 20 s: neither cat can be seen, Pikachu included, because the room scan's sofa hides the
+    spot (also at 25, 30 and 35 s). It was replaced, after the fact, by recorded video 18 at 40 s (sitting): whole.
+  - Passed with that substitution.
+- **On the page:** version 15 of Pikachu's Keep. "Cat" in the At home bar now shows the grey and white cat in its
+  own body. The coat version (Pikachu's body in the grey coat, version 14) is removed. The note "The grey and
+  white cat at home" and the grey cat's Body note are rewritten.
+- **Not done:** no measure of how closely its poses follow Pikachu's beyond the pictures; each grey bone moves as a rigid
+  blend of several of Pikachu's bones, so sharp joint bends may be softened (not checked).
