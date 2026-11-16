@@ -1,0 +1,77 @@
+diff --git a/lab4d/config.py b/lab4d/config.py
+index c6fcaa8..4da565c 100644
+--- a/lab4d/config.py
++++ b/lab4d/config.py
+@@ -56,6 +56,11 @@ class TrainOptConfig:
+     flags.DEFINE_string("load_suffix", "", "sufix of params, {latest, 0, 10, ...}")
+     flags.DEFINE_string("feature_type", "dinov2", "{dinov2, cse}")
+     flags.DEFINE_string("load_path", "", "path to load pretrained model")
++    flags.DEFINE_string(
++        "heldout_frames",
++        "",
++        "a,b: filtered frames a..b-1 (in time order) whose colour loss is zeroed",
++    )
+ 
+     # accuracy-related
+     flags.DEFINE_float("learning_rate", 5e-4, "learning rate")
+diff --git a/lab4d/engine/model.py b/lab4d/engine/model.py
+index 1718cb3..a7ea01c 100644
+--- a/lab4d/engine/model.py
++++ b/lab4d/engine/model.py
+@@ -42,6 +42,21 @@ class dvr_model(nn.Module):
+             num_freq_t=0,
+         )
+ 
++        # held-back frames: colour loss weight 0, everything else unchanged
++        colour_keep = None
++        if config.get("heldout_frames", ""):
++            a, b = [int(x) for x in config["heldout_frames"].split(",")]
++            frame_mapping = np.asarray(data_info["frame_info"]["frame_mapping"])
++            num_raw = int(data_info["frame_info"]["frame_offset_raw"][-1])
++            colour_keep = torch.ones(num_raw, dtype=torch.float32)
++            colour_keep[torch.as_tensor(frame_mapping[a:b], dtype=torch.long)] = 0
++            print(
++                "heldout_frames: colour held back on %d of %d frames, raw ids %d..%d"
++                % (b - a, len(frame_mapping), frame_mapping[a], frame_mapping[b - 1])
++            )
++        self.register_buffer("colour_keep", colour_keep, persistent=False)
++        self.heldout_logged = False
++
+     def mlp_init(self):
+         """Initialize camera transforms, geometry, articulations, and camera
+         intrinsics for all neural fields from external priors
+@@ -393,6 +408,15 @@ class dvr_model(nn.Module):
+         config = self.config
+         loss_dict = {}
+         self.compute_recon_loss(loss_dict, results, batch, config)
++        if self.colour_keep is not None:
++            keep = self.colour_keep[batch["frameid"]]
++            loss_dict["rgb"] = loss_dict["rgb"] * keep[:, None, None]
++            if not self.heldout_logged:
++                print(
++                    "heldout_frames: first batch, colour loss zeroed on %d of %d samples"
++                    % (int((keep == 0).sum()), len(keep))
++                )
++                self.heldout_logged = True
+         self.mask_losses(loss_dict, batch, config)
+         self.compute_reg_loss(loss_dict, results)
+         self.apply_loss_weights(loss_dict, config)
+diff --git a/lab4d/third_party/quaternion/setup.py b/lab4d/third_party/quaternion/setup.py
+index 5d4a252..d4b3546 100644
+--- a/lab4d/third_party/quaternion/setup.py
++++ b/lab4d/third_party/quaternion/setup.py
+@@ -7,12 +7,12 @@ from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+ _src_path = os.path.dirname(os.path.abspath(__file__))
+ 
+ nvcc_flags = [
+-    '-O3', '-std=c++14',
++    '-O3', '-std=c++17',
+     '-U__CUDA_NO_HALF_OPERATORS__', '-U__CUDA_NO_HALF_CONVERSIONS__', '-U__CUDA_NO_HALF2_OPERATORS__',
+ ]
+ 
+ if os.name == "posix":
+-    c_flags = ['-O3', '-std=c++14']
++    c_flags = ['-O3', '-std=c++17']
+ elif os.name == "nt":
+     c_flags = ['/O2', '/std:c++17']
+ 
