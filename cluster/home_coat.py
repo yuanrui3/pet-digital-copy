@@ -9,6 +9,8 @@ a coat baked from its model's colour network (no fur detail). Both are the same 
     the photo coat's fur detail survives) -> the C1 photo coat there (bilinear);
   - fourth try (FADE=inward, the default): the fade runs only into the seen area, so unseen C1 colours never leak in
   - third try (C1_SHAPE=canonical): the C1 cat's own face is turned in frame 89 and straight in its canonical shape
+  - SMEAR=cx,cy,cz,r_in,r_out (with HEAD_ONLY=1): the C1 coat's eye-like smear on the -x cheek replaced by a smooth
+    fill from the fur round it ("The far-cheek smudge")
   - first try (v1): blended toward the home cat's current coat where no C1 frame saw that spot (C1's photo_cover),
     after a colour match; it turned those spots blue-white with hard edges, and the chosen C1 frame had its head turned
     (face on the side of the head). Second try: the C1 shape is chosen by the turn its head needs as well (the home cat's
@@ -130,6 +132,11 @@ def lightness(rgb):
 def render(X, F, UV, tex, view, size=700, crop=None):
     """a plain z-buffered render with the texture, orthographic; view: 'front', 'side', 'top' (the home cat's frame:
     y down, z towards the tail). crop: (vertex mask) to frame only part of the cat"""
+    if view == "other_side":  # the -x side: turned half a turn about the vertical
+        X, view = X * np.array([-1.0, 1.0, -1.0]), "side"
+    elif view == "three_quarter":  # from the front, turned 40 degrees towards +x
+        a = np.radians(40)
+        X, view = X @ np.array([[np.cos(a), 0, np.sin(a)], [0, 1, 0], [-np.sin(a), 0, np.cos(a)]]).T, "front"
     axes = {"front": (0, 1, 2, 1), "side": (2, 1, 0, -1), "top": (0, 2, 1, 1)}[view]
     V = np.stack([X[:, axes[0]], X[:, axes[1]], axes[3] * X[:, axes[2]]], 1)
     sel = V if crop is None else V[crop]
@@ -169,6 +176,52 @@ def render(X, F, UV, tex, view, size=700, crop=None):
         zb[yy, xx] = z[ok][nearer]
         img[yy, xx] = sample(tex, L @ UV[F[f]]) * shade[f]
     return img
+
+
+def smear_fill(photo, tpos, spec, vox=0.003, iters=400):
+    """spec (cx, cy, cz, r_in, r_out), rest-pose metres: within r_in of the centre the photo colours are replaced by a
+    smooth fill from the ring outside r_in (3 mm voxels; each inner voxel repeatedly set to its occupied neighbours'
+    mean), fading back to the photo by r_out. Returns the new per-texel photo colours."""
+    c, r_in, r_out = np.array(spec[:3]), spec[3], spec[4]
+    d = np.linalg.norm(tpos - c, axis=1)
+    sel = np.where(d < r_out + 0.012)[0]
+    ijk = np.floor((tpos[sel] - (c - r_out - 0.02)) / vox).astype(int)
+    shape = tuple(ijk.max(0) + 2)
+    acc, cnt, inner = np.zeros(shape + (3,)), np.zeros(shape), np.zeros(shape, bool)
+    known = d[sel] >= r_in
+    np.add.at(acc, tuple(ijk[known].T), photo[sel[known]])
+    np.add.at(cnt, tuple(ijk[known].T), 1)
+    occ = np.zeros(shape, bool)
+    occ[tuple(ijk.T)] = True
+    inner[tuple(ijk[~known].T)] = True
+    inner &= cnt == 0  # voxels with any ring texel stay as measured
+    val = np.where(cnt[..., None] > 0, acc / np.maximum(cnt, 1)[..., None], 0)
+    val[inner] = val[occ & ~inner].mean(0)  # start from the ring's mean colour
+    offs = [o for o in np.ndindex(3, 3, 3) if o != (1, 1, 1)]
+    pad = lambda a: np.pad(a, [(1, 1)] * 3 + [(0, 0)] * (a.ndim - 3))  # noqa: E731
+    occp = pad(occ).astype(float)
+    for _ in range(iters):
+        vp = pad(val)
+        s = sum(vp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2]] * occp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2], None] for o in offs)
+        n = sum(occp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2]] for o in offs)
+        val[inner] = (s / np.maximum(n, 1)[..., None])[inner]
+    have = occ.copy()  # spread into the empty voxels next to the surface, so trilinear reads never mix in zeros
+    for _ in range(2):
+        vp, hp = pad(val), pad(have).astype(float)
+        s = sum(vp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2]] * hp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2], None] for o in offs)
+        n = sum(hp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2]] for o in offs)
+        new = ~have & (n > 0)
+        val[new] = (s / np.maximum(n, 1)[..., None])[new]
+        have |= new
+    q = ((tpos[sel] - (c - r_out - 0.02)) / vox - 0.5).T
+    fill = np.stack([map_coordinates(val[..., k], q, order=1, mode="nearest") for k in range(3)], 1)
+    t = np.clip((r_out - d[sel]) / (r_out - r_in), 0, 1)
+    w = t * t * (3 - 2 * t)
+    out = photo.copy()
+    out[sel] = (1 - w[:, None]) * photo[sel] + w[:, None] * fill
+    print("smear fill: %d texels replaced in full, %d faded; %d inner voxels filled from %d" % (
+        (w > 0.99).sum(), ((w > 0.01) & (w <= 0.99)).sum(), inner.sum(), (occ & ~inner).sum()), flush=True)
+    return out
 
 
 def main():
@@ -264,6 +317,17 @@ def main():
         forms = {"c1": near, "home": seen * ramp * ramp * (3 - 2 * ramp) * near}
     else:  # second and third tries: the fade blurred outward as well
         forms = {"c1": near, "home": np.clip(seen_soft, 0, 1) * near}
+    if os.environ.get("HEAD_ONLY") == "1":  # "A real face for the cat at home": the photo coat on the head only
+        tpos0, trc0 = rasterise(P, F, UV, SIZE)  # the same texels on the home cat's own rest pose
+        assert np.array_equal(trc0, trc)
+        back = tpos0[:, 2] - P[:, 2].min()  # behind the nose (z towards the tail)
+        below = tpos0[:, 1] - nose[1]       # below the nose (y down)
+        sm = lambda x: x * x * (3 - 2 * x)  # noqa: E731
+        head_w = sm(np.clip((0.10 - back) / 0.03, 0, 1)) * sm(np.clip((0.07 - below) / 0.03, 0, 1))
+        forms = {k: w * head_w for k, w in forms.items()}
+        print("head only: %.1f%% of texels fully head, %.1f%% partly" % (100 * (head_w > 0.99).mean(), 100 * ((head_w > 0.01) & (head_w <= 0.99)).mean()), flush=True)
+        if os.environ.get("SMEAR"):  # "The far-cheek smudge": the photo coat's eye-like smear filled with the fur round it
+            photo = smear_fill(photo, tpos0, [float(v) for v in os.environ["SMEAR"].split(",")])
     info = {"c1_shape": name, "head_turn_deg": turn, "rigid_fit_mm": 1000 * fd, "texels": int(len(tpos)),
             "closest_c1_mm_median": 1000 * float(np.median(dist)), "closest_c1_mm_p90": 1000 * float(np.percentile(dist, 90)),
             "closest_c1_mm_p99": 1000 * float(np.percentile(dist, 99)),
@@ -282,8 +346,11 @@ def main():
     texs = [tex_home] + [np.asarray(Image.open(os.path.join(out, "a2s_cat_tex_photo_%s.jpg" % k)).convert("RGB"),
                                     dtype=np.float32) / 255.0 for k in forms]
     head = (P[:, 2] < P[:, 2].min() + 0.12) & (P[:, 1] < nose[1] + 0.05)
-    for view, crop in (("front", None), ("side", None), ("top", None), ("front", head), ("side", head)):
-        tag = view + ("_head" if crop is not None else "")
+    views = (("front", None), ("side", None), ("top", None), ("front", head), ("side", head))
+    if os.environ.get("HEAD_ONLY") == "1":
+        views = (("front", head), ("side", head), ("other_side", head), ("three_quarter", head), ("side", None))
+    for view, crop in views:
+        tag = view + ("_head" if crop is not None else "") + ("_whole" if view == "side" and crop is None and os.environ.get("HEAD_ONLY") == "1" else "")
         row = [render(P, F, UV, tx, view, crop=crop) for tx in texs]
         Image.fromarray((np.concatenate(row, 1) * 255).clip(0, 255).astype(np.uint8)).save(
             os.path.join(out, "home_coat_%s.png" % tag))

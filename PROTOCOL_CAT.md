@@ -987,3 +987,116 @@ walk frames together, rose 1.1 points against a 1-point limit.
   - the `steps=0` and `iktest=` address settings;
   - a paragraph in the At home note. It says the steps missed one part of the pre-set bar (stretch) and are shown
     anyway.
+
+## A real face for the cat at home (plan, written 2026-11-17 at 05:58, before running; demo only)
+
+The user: "the face of the cat is still somehow horrendous". The At home cat's coat comes from its model's colour
+network. Its face has no eyes, nose or mouth, just a smooth pale blob
+(`experiments_coat/v4/home_coat_front_head.png`, left panel).
+
+The real-fur coat tries above already gave this cat a recognisable face from the Body tab's photo coat: two green
+eyes, a pink nose and whiskers, in place with the canonical C1 shape. They were dropped only for a black blotch on the
+rear thigh, far from the head.
+
+**Change** (`cluster/home_coat.py`, new setting `HEAD_ONLY=1`, CPU): the fourth try's transfer (C1 canonical shape,
+inward fade), applied to the head only.
+- **Head weight.** Each texel's weight is 1 within 7 cm of the nose (front to back, in the home cat's rest pose),
+  falling smoothly to 0 at 10 cm. It is also faded out below the head: full above 4 cm below the nose, nothing beyond
+  7 cm below it, so the chest and front legs are untouched.
+- **Everywhere else** keeps the current coat, so the thigh blotch cannot appear.
+- **On the page,** the result replaces `a2s_cat_tex.jpg` for the home cat (Pikachu only). The pale real cat beside
+  replays wears the same coat, as it does now.
+
+**Kept only if:**
+1. **Head renders** (offline, rest pose; front, both sides, three-quarter): two eyes, a nose and a mouth area in
+   place. The face sits between the ears, not pushed to one side by more than about a quarter of the head's width.
+2. **No seam:** no visible edge where the new head coat meets the old coat at the neck, in the same renders.
+3. **On the page,** at two moments where the face is toward the camera (picked by turning the camera in the page):
+   the face reads as a cat's face, with no third eye or smear visible at the page's normal viewing distance.
+4. **Lightness:** the whole coat's mean lightness stays within 4 of the real cat's (L 74).
+5. **No console errors.**
+
+If kept, this is version 19, and the At home note says the face comes from the Body tab's photo coat. If not, the
+reason is recorded here. There is one try, plus one more only if the renders show a bug.
+
+### Result (2026-11-17, 06:08 run, checked 09:10): kept, version 19
+
+Run: `HEAD_ONLY=1 python cluster/home_coat.py ...` into `experiments_coat/v5` (CPU). The head's photo-coat weight
+covers about 4.5% of texels in full (`share_photo_full` 0.045), with 91% left fully as the old coat.
+
+1. **Head renders** (`v5/home_coat_{front,side,other_side,three_quarter}_head.png`): two green eyes, a pink nose,
+   whiskers and the white muzzle are in place. The face sits toward the head's +x side, as in the C1 coat it comes
+   from. From the front it is off-centre by about 21% of the head's width, under the 25% limit. **Pass.**
+2. **Seam** (`side_head`, `side_whole`): there is no hard edge at the neck. Under the chin it runs white into white. A
+   darker band behind the cheek is also in the full C1 coat (the middle panels), so the transfer did not make it. The
+   head reads a little more saturated than the pale body, like a soft mask. **Pass.**
+3. **On the page** (local copy, headless Chrome, camera set in front of the cat by a check-only address setting that
+   was not published):
+   - walk 1 at 10 s, camera straight ahead of the cat;
+   - walk 3 at 15 s, camera 30° round to where the head was turned.
+
+   Both, at about 0.8 m, read as a real cat's face: two eyes, nose, muzzle, ears. Neither showed a third eye.
+   **Pass.**
+
+   Seen from the other side (walk 3 at 15 s from straight ahead of the body, with the head turned away), the smear on
+   the far cheek reads as a third, squinting eye beside the two real ones. This flaw sits in the C1 photo coat itself
+   (`front_head` middle panel), outside the rule's two moments. The page note says so.
+4. **Lightness:** L 70.5, against the real cat's 74 (limit 4). **Pass.**
+5. **Console:** no errors. The page loads `a2s_cat_tex_face.jpg`. **Pass.**
+
+Published as **version 19**. It changes only `data/a2s_cat.json` (texture → `a2s_cat_tex_face.jpg`), the new texture
+and one paragraph of the At home note. `a2s_cat_tex.jpg` stays in the artifact (unused), so reverting means switching
+the json back. A possible next step would remove the far-cheek smear by fading the head weight out on the −x cheek, where
+C1's coat has it, letting the old coat show there. Not tried.
+
+## The far-cheek smudge (plan, written 2026-11-17 at 09:20, before running; demo only)
+
+The user said "Yes, try it" to fading out the smudge on the home cat's −x cheek. It comes from the C1 photo coat and,
+from that side, reads as a third, squinting eye. **Where it is:** in the home cat's rest pose, around
+(−0.058, −0.148, −0.330) m. That is about 6 cm from the nearer real eye at (−0.002, −0.140, −0.344). I found it from the
+v5 front render (`experiments_coat/smear_diag2.py`); a test region drawn there covers it in the front and side views.
+
+**Change** (`cluster/home_coat.py`, new setting `SMEAR=cx,cy,cz,r_in,r_out` with `HEAD_ONLY=1`, CPU):
+- Within 2 cm of that point, the photo coat is replaced by the colour of the fur around it, fading back to the photo
+  coat by 3 cm.
+- **The fill:** the photo coat's colours in 3 mm voxels, filled smoothly inward from the ring outside 2 cm (each inner
+  voxel repeatedly averaged with its neighbours).
+- So the cheek keeps the photo coat's fur tone but loses the eye-like marks, and its fur detail there.
+- Everything else is as in version 19. The output goes to `experiments_coat/v6`.
+
+**Kept only if:**
+1. **Offline renders** (front, other side, three-quarter, side): no eye-like mark left on the −x cheek. The two real
+   eyes, nose and muzzle unchanged. Texels more than 4 cm from the point match v5 apart from JPEG noise (mean
+   difference under 1/255).
+2. **No new patch:** the filled cheek does not read as a blank or blotchy spot, with no edge at the 3 cm ring, in the
+   same renders.
+3. **On the page:** walk 3 at 15 s, seen from straight ahead of the body, where version 19 showed the third eye: no
+   third eye. The two face-on moments (walk 1 at 10 s, walk 3 at 15 s from 30° round) still read as a cat's face.
+4. **Lightness:** within 4 of the real cat's (L 74).
+5. **No console errors.**
+
+If kept, this is version 20, and the At home note drops the third-eye sentence. If not, version 19 stays and the reason
+is recorded here. There is one try, plus one more only if the renders show a bug.
+
+### Result (2026-11-17, checked 09:32): kept, version 20
+
+Run: `HEAD_ONLY=1 C1_SHAPE=canonical SMEAR=-0.058,-0.148,-0.330,0.020,0.030 python cluster/home_coat.py ...` into
+`experiments_coat/v6` (CPU). The fill replaced 8,082 texels in full and faded 8,885 more; 183 inner voxels were filled
+from 827 around them. Check script: `experiments_coat/smear_check.py`, picture `v6/smear_check.png` (v5 left, v6 right).
+
+1. **Offline renders:** the eye-like slit and grey-blue streaks are gone from the −x cheek, in the front, other-side and
+   close-up views. A very faint bluish tint is left where the smudge's outer edge was, in the fade ring; it is not
+   eye-shaped. The real eyes, nose and muzzle are unchanged. Mean difference from v5: 11.8/255 within 2 cm,
+   2.5/255 at 2-3 cm, 0.08/255 at 3-4 cm and 0.00/255 beyond 4 cm (limit 1/255). **Pass.**
+2. **No new patch:** the cheek has the fur's tone, with no edge at the ring. It is smoother than the fur around it,
+   having lost the photo's fur detail there. On the page at normal size this reads as a soft area. Enlarged two times,
+   it is a visibly blurred patch. **Pass, narrowly.**
+3. **On the page:** walk 3 at 15 s, seen from straight ahead of the body, where version 19 showed the third eye: gone.
+   From the turned-away side, the squinting mark is now a faint smear. The two face-on moments (walk 1 at 10 s; walk 3
+   at 15 s from 30° round) still read as a cat's face, unchanged. **Pass.**
+4. **Lightness:** L 70.5, unchanged from v5 (limit: within 4 of 74). **Pass.**
+5. **Console:** no errors; the page loads `a2s_cat_tex_face2.jpg`. **Pass.**
+
+Published as **version 20**: `data/a2s_cat.json` (texture → `a2s_cat_tex_face2.jpg`), the new texture, and the At home
+note's third-eye sentence replaced by one saying the smudge is smoothed over. The version 19 texture
+`a2s_cat_tex_face.jpg` and the original `a2s_cat_tex.jpg` both stay in the artifact, unused.
