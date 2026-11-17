@@ -11,6 +11,10 @@ a coat baked from its model's colour network (no fur detail). Both are the same 
   - third try (C1_SHAPE=canonical): the C1 cat's own face is turned in frame 89 and straight in its canonical shape
   - SMEAR=cx,cy,cz,r_in,r_out (with HEAD_ONLY=1): the C1 coat's eye-like smear on the -x cheek replaced by a smooth
     fill from the fur round it ("The far-cheek smudge")
+  - FILL=1 (fifth try, in place of HEAD_ONLY): the whole cat wears the photo coat; texels unseen by C1, far from its
+    surface, or much darker than the fur within 5 cm (outside the front of the face) take a smooth fill from the reliable
+    fur around them instead of the old coat ("The real fur on the whole cat at home")
+  - DIAG_W=1: also writes weights.jpg (R close to the C1 surface, G seen by C1's video, B head weight) and renders it
   - first try (v1): blended toward the home cat's current coat where no C1 frame saw that spot (C1's photo_cover),
     after a colour match; it turned those spots blue-white with hard edges, and the chosen C1 frame had its head turned
     (face on the side of the head). Second try: the C1 shape is chosen by the turn its head needs as well (the home cat's
@@ -31,7 +35,7 @@ import sys
 
 import numpy as np
 from PIL import Image
-from scipy.ndimage import map_coordinates, uniform_filter
+from scipy.ndimage import distance_transform_edt, map_coordinates, uniform_filter
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -45,6 +49,7 @@ HEAD = 0.10       # the head: within this of the nose, front to back
 VOX = 0.01        # voxel size for fading the unseen spots over the surface
 NEAR, FAR = 0.005, 0.010   # closest C1 point this far: photo coat in full / not at all
 K_CAND = 12                # candidate C1 triangles per texel (nearest centroids)
+DARK_FROM, DARK_FULL = 9.0, 15.0  # FILL: this many lightness points darker than the fur round it: starts / fully unreliable
 
 
 def load_page(page_dir, name):
@@ -224,6 +229,55 @@ def smear_fill(photo, tpos, spec, vox=0.003, iters=400):
     return out
 
 
+def _neighbour_mean(val, weight, offs):
+    """per voxel: the weighted mean of its 26 neighbours (weight 0 outside the grid); also the summed weight"""
+    shape = weight.shape
+    vp = np.pad(val, [(1, 1)] * 3 + [(0, 0)])
+    wp = np.pad(weight, [(1, 1)] * 3)
+    s, n = np.zeros(val.shape), np.zeros(shape)
+    for o in offs:
+        w = wp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2]]
+        s += vp[o[0]:o[0] + shape[0], o[1]:o[1] + shape[1], o[2]:o[2] + shape[2]] * w[..., None]
+        n += w
+    return s / np.maximum(n, 1e-9)[..., None], n
+
+
+def voxel_fill(photo, tpos, rel, vox=0.004, iters=300):
+    """FILL: a smooth colour for every texel from the reliable ones around it. Voxels whose texels are mostly reliable
+    (mean rel >= 0.5) keep their rel-weighted photo colour; the other occupied voxels start from the nearest reliable
+    voxel and are then repeatedly set to the mean of their occupied neighbours (a fill over the surface). Read back
+    per texel with trilinear interpolation."""
+    lo = tpos.min(0) - 2 * vox
+    ijk = np.floor((tpos - lo) / vox).astype(int)
+    shape = tuple(ijk.max(0) + 3)
+    idx = tuple(ijk.T)
+    acc, wsum, cnt = np.zeros(shape + (3,)), np.zeros(shape), np.zeros(shape)
+    np.add.at(acc, idx, rel[:, None] * photo)
+    np.add.at(wsum, idx, rel)
+    np.add.at(cnt, idx, 1)
+    occ = cnt > 0
+    known = occ & (wsum >= 0.5 * cnt) & (wsum > 1e-6)
+    assert known.any(), "no reliable voxel"
+    val = np.where(known[..., None], acc / np.maximum(wsum, 1e-9)[..., None], 0)
+    unk = occ & ~known
+    _, ind = distance_transform_edt(~known, return_indices=True)
+    val[unk] = val[ind[0][unk], ind[1][unk], ind[2][unk]]
+    offs = [o for o in np.ndindex(3, 3, 3) if o != (1, 1, 1)]
+    occf = occ.astype(float)
+    for _ in range(iters):
+        m, _n = _neighbour_mean(val, occf, offs)
+        val[unk] = m[unk]
+    have = occ.copy()  # spread one voxel into the empty space so trilinear reads never mix in zeros
+    for _ in range(2):
+        m, n = _neighbour_mean(val, have.astype(float), offs)
+        new = ~have & (n > 0)
+        val[new] = m[new]
+        have |= new
+    q = ((tpos - lo) / vox - 0.5).T
+    print("voxel fill: %d occupied voxels, %d reliable, %d filled" % (occ.sum(), known.sum(), unk.sum()), flush=True)
+    return np.stack([map_coordinates(val[..., k], q, order=1, mode="nearest") for k in range(3)], 1)
+
+
 def main():
     page_dir, c1_npz, c1_tex_path, c1_cover_path, home_tex_path, out = sys.argv[1:7]
     os.makedirs(out, exist_ok=True)
@@ -317,6 +371,7 @@ def main():
         forms = {"c1": near, "home": seen * ramp * ramp * (3 - 2 * ramp) * near}
     else:  # second and third tries: the fade blurred outward as well
         forms = {"c1": near, "home": np.clip(seen_soft, 0, 1) * near}
+    head_w = np.ones(len(tpos))
     if os.environ.get("HEAD_ONLY") == "1":  # "A real face for the cat at home": the photo coat on the head only
         tpos0, trc0 = rasterise(P, F, UV, SIZE)  # the same texels on the home cat's own rest pose
         assert np.array_equal(trc0, trc)
@@ -328,6 +383,40 @@ def main():
         print("head only: %.1f%% of texels fully head, %.1f%% partly" % (100 * (head_w > 0.99).mean(), 100 * ((head_w > 0.01) & (head_w <= 0.99)).mean()), flush=True)
         if os.environ.get("SMEAR"):  # "The far-cheek smudge": the photo coat's eye-like smear filled with the fur round it
             photo = smear_fill(photo, tpos0, [float(v) for v in os.environ["SMEAR"].split(",")])
+    whole = os.environ.get("FILL") == "1"
+    if whole:  # "The real fur on the whole cat at home" (fifth try): unreliable texels filled from the fur around them
+        tpos0, trc0 = rasterise(P, F, UV, SIZE)
+        assert np.array_equal(trc0, trc)
+        if os.environ.get("SMEAR"):
+            photo = smear_fill(photo, tpos0, [float(v) for v in os.environ["SMEAR"].split(",")])
+        rel0 = forms["home"]  # seen by C1's video (inward fade) and close to its surface
+        Lp = lightness(photo)
+        lo1 = tpos0.min(0) - 3 * VOX
+        ij1 = np.floor((tpos0 - lo1) / VOX).astype(int)
+        sh1 = tuple(ij1.max(0) + 4)
+        accL, cntL = np.zeros(sh1), np.zeros(sh1)
+        np.add.at(accL, tuple(ij1.T), rel0 * Lp)
+        np.add.at(cntL, tuple(ij1.T), rel0)
+        accL, cntL = uniform_filter(accL, 5), uniform_filter(cntL, 5)  # the reliable fur within about 5 cm
+        loc = map_coordinates(np.where(cntL > 1e-9, accL / np.maximum(cntL, 1e-9), 0), ((tpos0 - lo1) / VOX - 0.5).T,
+                              order=1, mode="nearest")
+        dark = np.clip((loc - Lp - DARK_FROM) / (DARK_FULL - DARK_FROM), 0, 1)
+        face_front = tpos0[:, 2] - P[:, 2].min() < 0.03
+        dark[face_front] = 0  # eyes, nose and mouth keep their dark marks
+        rel = rel0 * (1 - dark)
+        fill = voxel_fill(photo, tpos0, rel)
+        photo = rel[:, None] * photo + (1 - rel[:, None]) * fill
+        forms = {"fill": np.ones(len(tpos))}
+        L_after = lightness(photo)
+        fill_info = {"share_rel_under_half": float((rel < 0.5).mean()), "share_dark_over_half": float((dark > 0.5).mean()),
+                     "share_L_under_35_outside_face_before": float(((Lp < 35) & ~face_front).mean()),
+                     "share_L_under_35_outside_face_after": float(((L_after < 35) & ~face_front).mean())}
+        print("whole-cat fill: %s" % json.dumps(fill_info), flush=True)
+        if os.environ.get("DIAG_W") == "1":  # R close to C1, G reliable (seen and close), B not too dark
+            fill_and_save(np.stack([near, rel0, 1 - dark], 1), trc, SIZE, os.path.join(out, "weights.jpg"))
+    elif os.environ.get("DIAG_W") == "1":  # why a texel keeps the old coat: R close to C1, G seen by C1's video, B head weight
+        fade = forms["home"] / np.maximum(near * head_w, 1e-9)
+        fill_and_save(np.stack([near, np.clip(fade, 0, 1), head_w], 1), trc, SIZE, os.path.join(out, "weights.jpg"))
     info = {"c1_shape": name, "head_turn_deg": turn, "rigid_fit_mm": 1000 * fd, "texels": int(len(tpos)),
             "closest_c1_mm_median": 1000 * float(np.median(dist)), "closest_c1_mm_p90": 1000 * float(np.percentile(dist, 90)),
             "closest_c1_mm_p99": 1000 * float(np.percentile(dist, 99)),
@@ -339,18 +428,26 @@ def main():
         L = float(lightness(rgb).mean())
         info[k] = {"share_photo_full": float((w > 0.99).mean()), "share_photo_none": float((w < 0.01).mean()),
                    "lightness_L_mean": L, "readout_lightness": "within 4 of 74" if abs(L - 74) <= 4 else "off by more than 4"}
+    if whole:
+        info["whole_cat_fill"] = fill_info
     json.dump(info, open(os.path.join(out, "home_coat.json"), "w"), indent=1)
     print(json.dumps(info, indent=1), flush=True)
 
     # ---- offline renders of the rest pose: current coat against photo coat
     texs = [tex_home] + [np.asarray(Image.open(os.path.join(out, "a2s_cat_tex_photo_%s.jpg" % k)).convert("RGB"),
                                     dtype=np.float32) / 255.0 for k in forms]
+    if os.environ.get("DIAG_W") == "1":
+        texs.append(np.asarray(Image.open(os.path.join(out, "weights.jpg")).convert("RGB"), dtype=np.float32) / 255.0)
     head = (P[:, 2] < P[:, 2].min() + 0.12) & (P[:, 1] < nose[1] + 0.05)
     views = (("front", None), ("side", None), ("top", None), ("front", head), ("side", head))
+    later = os.environ.get("HEAD_ONLY") == "1" or whole
     if os.environ.get("HEAD_ONLY") == "1":
         views = (("front", head), ("side", head), ("other_side", head), ("three_quarter", head), ("side", None))
+    if whole:
+        views = (("front", head), ("side", head), ("other_side", head), ("three_quarter", head), ("side", None),
+                 ("other_side", None), ("top", None))
     for view, crop in views:
-        tag = view + ("_head" if crop is not None else "") + ("_whole" if view == "side" and crop is None and os.environ.get("HEAD_ONLY") == "1" else "")
+        tag = view + ("_head" if crop is not None else "") + ("_whole" if crop is None and later and view != "top" else "")
         row = [render(P, F, UV, tx, view, crop=crop) for tx in texs]
         Image.fromarray((np.concatenate(row, 1) * 255).clip(0, 255).astype(np.uint8)).save(
             os.path.join(out, "home_coat_%s.png" % tag))

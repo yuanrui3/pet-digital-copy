@@ -1100,3 +1100,92 @@ from 827 around them. Check script: `experiments_coat/smear_check.py`, picture `
 Published as **version 20**: `data/a2s_cat.json` (texture → `a2s_cat_tex_face2.jpg`), the new texture, and the At home
 note's third-eye sentence replaced by one saying the smudge is smoothed over. The version 19 texture
 `a2s_cat_tex_face.jpg` and the original `a2s_cat_tex.jpg` both stay in the artifact, unused.
+
+## The face in profile (checked 2026-11-17 at 09:45; diagnosis only, nothing changed on the page)
+
+The user: "the face still looks weird from side as profile". Page renders from the side (walk 1 at 10 s, walk 3 at
+15 s, camera at ±90°) show the real-fur coat as a thin mask on the front of the face. Behind it, a dark vertical band
+runs down from the ear, and then the old pale-yellow coat covers the rest of the head, the neck and the body. The Body
+tab cat, wearing the same photo coat on its own shape, looks right in profile.
+
+**Why** (`DIAG_W=1` run into `experiments_coat/v6d`, weight map in `home_coat_side_whole.png`, fourth panel):
+- **The head box:** the photo coat stops at the head box, 7 to 10 cm behind the nose and 4 to 7 cm below it. Its
+  straight back edge is what reads as a mask from the side.
+- **Unseen spots:** behind the ear, the C1 video never saw the fur, so even inside the box those texels fall back to
+  the old coat.
+- **The dark band** is in the transferred C1 coat itself. It is C1's ear and the shadow behind it, landing on the home
+  cat's cheek because the two heads differ in shape (12 mm rigid fit, 8° head turn).
+
+The fourth try's whole-body coat (`v4/home_coat_side.png`) reads far more like a cat in profile. It has fur from
+head to tail, with no mask edge. But unseen spots show either as pale-yellow patches (old coat) or, in the C1-colours
+form, as dark blotches (the rear-thigh blotch that stopped it).
+
+## The real fur on the whole cat at home (fifth try; plan, written 2026-11-17 at 09:50, before running; demo only)
+
+The user chose "Whole cat" to fix the profile. The Body tab's photo coat goes on the whole At home cat, not just a box
+around the face. The fourth try's transfer is reused (C1 canonical shape, inward fade), keeping the far-cheek smudge
+fill. What is new is how spots with no trustworthy photo colour are handled.
+
+**Unreliable texels:**
+- unseen by C1's video;
+- more than 1 cm from the C1 surface;
+- or 12+ lightness points darker than the fur within 5 cm (ramping from 9 to 15). This catches the ghost-ear band on
+  the cheek, the rear-thigh blotch and dark streaks.
+
+The front 3 cm of the face is exempt from the darkness test, so the eyes, nose and mouth keep their dark marks.
+`experiments_coat/band_diag.py` on the fourth try's coat flags 5.4% of texels by darkness: the ear band and the
+thigh blotches on both sides, plus streaks on the back and tail.
+
+**Change** (`cluster/home_coat.py`, new setting `FILL=1` in place of `HEAD_ONLY=1`, CPU):
+- **The fill:** unreliable texels take a smooth fill from the reliable fur around them (4 mm voxels, filled from the
+  nearest reliable voxel, then smoothed over the surface), never the old pale coat. Each texel blends photo and fill by
+  its reliability.
+- **Every texel** wears this coat. Output goes to `experiments_coat/v7`.
+- **On the page** it replaces the home cat's texture. The pale real cat beside the replays wears it too, as now. The
+  grey cat is untouched.
+
+**Kept only if:**
+1. **Profile** (offline side, other side and head close-ups): fur runs from the face over the head and neck to the
+   body with no mask edge, and the ghost-ear band is gone. The eyes, nose and muzzle are in place as in version 20.
+2. **No blotches or holes:** no dark spots or pale patches that read as marks in the whole-cat renders. Texels with
+   L < 35 outside the front of the face: under 0.5% (fourth try: 4.1% of all texels).
+3. **On the page:** profiles from both sides at walk 1 at 10 s and walk 3 at 15 s read as a furred cat with no mask.
+   The two face-on moments still read as the cat's face, and the third eye stays gone.
+4. **Lightness:** the whole coat's mean within 4 of the real cat's (L 74).
+5. **No console errors.**
+
+If kept, this is version 21, and the At home note's face paragraph becomes one about the whole coat. If not, version
+20 stays and the reason is recorded here. There is one try, plus one more only if the renders show a bug.
+
+### Result (2026-11-17, checked 10:06): passes all five rules; not yet published (the user sees it first)
+
+Run: `FILL=1 DIAG_W=1 C1_SHAPE=canonical SMEAR=... python cluster/home_coat.py ...` into `experiments_coat/v7`
+(CPU, about 8 minutes).
+- **How much was filled:** 24% of texels had reliability under one half and take mostly the fill. 9.5% were flagged
+  as much darker than the fur around them.
+- **The fill test:** on a synthetic sphere, a hole cut in a colour gradient filled to within 0.01 of the true colour.
+
+1. **Profile** (`v7/home_coat_side_whole.png`, `other_side_whole`, `side_head`, `other_side_head`): fur runs from
+   the face over the head, neck and body to the tail on both sides, with no mask edge. The ghost-ear band is replaced
+   by smooth fur colour. In the head close-up a faint outline of it and a thin line down from the ear remain. The eyes,
+   nose and muzzle are as in version 20. **Pass.**
+2. **No blotches or holes:** texels with L < 35 outside the front of the face fell from 4.1% to 0.01% (limit 0.5%). The
+   rear-thigh blotches on both sides are gone. Filled areas (back of the hind legs, belly, behind the ears) read as
+   smooth fur-coloured patches, not marks. **Pass.**
+3. **On the page:** profiles from both sides at walk 1 at 10 s and walk 3 at 15 s read as a furred tan-and-cream cat,
+   with no mask. Face-on (walk 1 at 10 s; walk 3 at 15 s from 30° round) the real face still shows, and there is no
+   third eye. **Pass.**
+4. **Lightness:** L 70.9 (limit: within 4 of 74). **Pass.**
+5. **Console:** no errors; the page loads `a2s_cat_tex_fur.jpg` (local copy only). **Pass.**
+
+The cat's overall colour changes from the old smooth pale yellow-orange to the photo coat's tan and cream fur. The user
+was unsure what "Whole cat" meant, so the result is shown to them before it is published as version 21.
+
+**The user saw the four page renders (before and after in profile, the other side, face-on) and said "Publish it".**
+Published as **version 21**:
+- `data/a2s_cat.json` now points to `a2s_cat_tex_fur.jpg`, the new texture;
+- the At home note's face paragraph is rewritten to cover the whole coat, including the quarter filled from the fur
+  around it and why.
+
+The earlier textures (`a2s_cat_tex.jpg`, `a2s_cat_tex_face.jpg`, `a2s_cat_tex_face2.jpg`) stay in the artifact,
+unused, so going back means switching the json.
