@@ -570,3 +570,341 @@ themselves were met.
   the run and the shape is visibly wrong.
 - **Not done:** the grey cat stays as on the page: hind paws one behind the other, the -x hind paw 4 cm up, and one
   fused front leg. A cat whose model has four separate, well-jointed legs would be the way to a square stance.
+
+## The real cat's fur at home (plan, written 2026-11-17 at 02:40, before running; demo only)
+
+The user picked "the real cat's fur on Pikachu at home". The At home cat is Agent-to-Sim's own Pikachu. Its 2048 px
+coat was baked from its model's colour network and then brightened to the real cat's lightness (CIELAB L 74), so it has
+no fur detail. The Body tab's C1 cat wears a photo coat painted from the real video frames (version 8).
+
+**Source.** I chose to move the Body tab's photo coat onto the home mesh. Painting A2S's own home videos directly isn't
+possible: those frames are not on the cluster. The README's one training-data archive (`polycam_all.zip`, 1.49 GB)
+belongs to its example bunny scene: the formatting script's cat line is commented out. Even with frames, A2S's
+preprocessing (masks, crops) isn't installed. Both coats show the same cat, Pikachu; the C1 photo coat comes from the
+BANMo/Lab4D `cat-pikachu-0` frames.
+
+**Method** (`cluster/home_coat.py`, CPU):
+- **Pick the C1 shape.** Of the C1 cat's canonical shape and its 92 posed frames, use the one that best fits the home
+  cat's rest pose after a rigid fit (one scale, rotation, shift), among those with four clear paws.
+- **Find which part of the C1 cat each home vertex is.** Bend the home mesh smoothly onto that shape with paws, nose and
+  tail tip pinned, as the grey cat's retarget did, with its UV seams welded first.
+- **Read a colour for each home texel.** Take its point on the bent home surface and find the closest point on the C1
+  surface (exact point-to-triangle, not nearest vertex, so the fur detail survives). Read the C1 photo coat there
+  (bilinear).
+- **Fall back to the current coat where the photo coat is weak.** Blend toward the home cat's current coat where the C1
+  coat was not seen by any frame (C1's `photo_cover`, about 15% of its texels, mostly the belly). Do the same where the
+  closest C1 point is over 0.5 cm away, fully by 1 cm.
+- **Fill the gaps between UV pieces** as before.
+
+**Kept if:**
+1. The new coat's average lightness (CIELAB L over its texels) is within 4 of the real cat's 74.
+2. **Renders, judged by eye** (current coat vs photo coat):
+   - offline renders of the rest pose (front, side, top, and the head close up);
+   - headless-Chrome renders at home at recorded video 18 at 90 s and 40 s, and walk 3 at 5 s and 15 s.
+
+   The photo coat must show fur detail (stripes, face markings) that the current coat lacks. It must show no visible
+   seams, no blotches, and no face features out of place: eyes and nose where the head's are, and no extra eye showing at
+   the page's distance. (The C1 coat has a faint one on the side of the head.)
+3. No console errors on the page.
+
+If kept, the photo coat becomes the default at home, also on the pale real cat beside replays. A "Coat" select switches
+back to the model's coat.
+
+### The real cat's fur at home: first try (2026-11-17, 02:50; `experiments_coat/v1`, CPU, about 6 min)
+
+**Not kept.** Lightness passes: the new coat's average L is 70.9, against the real cat's 74 (within 4). The current
+coat averages 71.3 over its texels. The renders fail by eye (`home_coat_*.png`), although the fur detail is plainly
+there: eyes, whiskers and tabby stripes, none of which the current coat has. The failures:
+- **The face is turned toward one side.** The C1 shape chosen (frame 89; rigid fit 12 mm, the best of the 93) has its
+  head turned, so the home cat's eyes and nose land on the side of its head. The front of the face is a smear.
+- **Pale bluish patches with hard edges** on the belly, rear thigh, tail and the back of the neck. These are where no
+  C1 frame saw the coat (15% of texels), filled from the current coat after a colour match (gains 0.81, 0.88, 1.13).
+  That match turned the cream coat blue-white, and the switch between the two coats is abrupt.
+
+Mapping detail: the closest C1 point was a median 1.4 mm away (90th percentile 3.6 mm); 0.3% of texels were over 1 cm
+away.
+
+**Change, written before running again (02:51):**
+- **Head as well as body.** For each of the 40 best-fitting C1 shapes with four clear paws, fit the home cat's head
+  (within 10 cm of its nose, front to back) to the C1 surface on its own, starting from the whole-body fit. Use the
+  shape whose head needs the smallest extra turn; ties within 5° go to the better whole-body fit.
+- **Unseen spots:** two forms, judged side by side by eye under the same rule:
+  (a) C1's own colours there, as the Body tab's photo coat already has them (its model's colour network), with no
+  blending toward the home coat;
+  (b) the current home coat, with no colour match, fading over about 2 cm on the surface instead of switching.
+- Texels over 1 cm from the C1 surface still keep the current coat (no colour match).
+
+### The real cat's fur at home: second try (2026-11-17, 03:00; `experiments_coat/v2`)
+
+**Not kept.**
+- **The head test didn't work.** It still chose frame 89: every one of the 40 shapes needed only 7 to 35° more head
+  turn, frame 89 11°, the canonical shape 8° (a tie within 5°, which goes to the better body fit). The head fit was
+  poor (residual about 20 mm), so it can't tell how a rounded head is turned.
+- **The face is still turned in the renders:** the nose sits right of centre, and the left eye is a smear.
+- **Fallbacks:** (a), C1's own colours, has dark smudges on the thigh and tail, and its lightness is L 67.8, more than 4
+  off 74. (b), the current coat fading over the surface, has no blue patches, only soft cream areas on the belly and
+  thigh, and its lightness is L 72.2 (passes).
+- **Check** (`experiments_coat/c1_front_head.png`): the C1 cat's own photo coat rendered from the front shows the cause.
+  In frame 89 its face is turned to one side; in the canonical shape and frame 77 it looks straight ahead. The
+  canonical shape fits the home cat's body as well as frame 89 does (12.1 against 12.0 mm). The C1 coat's eyes can be
+  found by colour (teal texels), but I did not need them.
+
+**Change, written before running again (03:03):** use the C1 canonical shape (straight face, equally good body fit),
+and fallback (b). Everything else, including the keep rule, unchanged.
+
+### The real cat's fur at home: third try (2026-11-17, 03:13; `experiments_coat/v3`)
+
+**Not kept.**
+- **Passes:** lightness, L 72.5 with fallback (b) (within 4). The face is now in place in the offline renders: both
+  eyes, nose and whiskers face forward, with the nose slightly right of centre.
+- **Fails:** headless renders at the four moments (`homecoat=photo` against `homecoat=model`; the page's own distance
+  and closer). There is a sharp black blotch on the -x rear thigh, plainly visible at walk 3 at 5 s and at recorded
+  video 18 at 90 s, plus brown smudges on top of the head and grey smears on the tail. The cat faces away at all four
+  moments, so the face can't be judged there. The faint extra eye shows on the left cheek in the offline close-up.
+- **Cause, checked:** 0.34% of the texels outside the head are very dark (L under 35), 5,093 of them in one patch on
+  that thigh. On the C1 coat, two thirds of the very dark texels are spots no frame saw: its model's own colours there
+  (median L 60 unseen, against 72 seen). Fallback (b)'s 2 cm fade blurs the "seen" weight outward as well as inward,
+  so unseen C1 colours leak in near the edge of what was seen.
+
+**Change, written before running again (03:15):** the fade runs only inward. The photo coat's weight is the "seen"
+weight times a ramp that is 0 at the edge of the seen area and 1 about 1 cm inside it, so a spot no C1 frame saw never
+takes C1's colour. Everything else unchanged. This is the last try. If the renders still show blotches, the coat is not
+kept.
+
+### The real cat's fur at home: fourth try and outcome (2026-11-17, 03:25; `experiments_coat/v4`)
+
+**Not kept; the page stays at version 17.**
+- **Passes:** lightness, now L 74.1, since the unseen spots keep the current coat in full.
+- **Fails:** the black blotch on the -x rear thigh is unchanged. There are still 5,149 very dark texels in the same
+  place, and it shows in the headless render at walk 3 at 5 s. So it doesn't come from spots no frame saw.
+- **Cause** (`experiments_coat/c1_minus_x.png`): the C1 cat's own -x side, rendered with its photo coat, has no dark
+  spot there. The home cat's outer thigh is mapped onto a dark, shadowed fold of the C1 cat, probably the gap between
+  its hind leg and belly, where the two body shapes differ. Everywhere else the -x side looks convincingly like the
+  real cream cat.
+- As decided before this try, there are no more tries. The page code for the "Coat" select (photo coat by default,
+  `homecoat=` address setting, also on the pale real cat) is saved as a patch and removed from the page. The texture
+  is removed from `viewer/data`.
+
+**What was learnt:**
+- The transfer works for fur detail and lightness, and with the canonical C1 shape it puts the face in place. It fails
+  where the two meshes' shapes differ enough that the closest point lands in a crease.
+- A next try would treat very dark texels outside the head (L under about 35, 0.3% of texels) as unseen, so they keep
+  the current coat. The open checks would then be the face at a moment where the cat faces the camera, and the faint
+  extra eye at the page's distance.
+- Painting A2S's own home videos would avoid the shape mismatch, but those frames are not public as far as I can tell.
+
+## Paws that stay planted (plan, written 2026-11-17 at 05:06, before running; demo only)
+
+The user picked "Paws that stay planted", the next of the three directions offered after version 17.
+
+**What the earlier holds missed** (a diagnostic on `experiments_feet/check`; no fix run; `experiments_feet/skate_diag.py`):
+- Pikachu's slow-skating steps are down steps (the paw down in both frames) that move 1.5 to 3 cm in 0.1 s. They are
+  15.6% of recorded and 15.5% of walk down steps.
+- In those steps the paw moves only 0.9 cm against the body (recorded; walks 0.6 cm; medians), but 1.5 to 3 cm across
+  the room. So the body glides while the legs stay still.
+- A down stretch lasts a median 1.5 s, and the paw travels a median 26 to 28 cm in it. A hold capped at 4 cm cannot
+  cover that, which is why both earlier holds stopped at about 7%.
+- Deciding contact by height is not the problem: in 85 to 91% of these steps the paw is over 14 cm below the body's
+  centre, so the cat is standing.
+
+**Change: short lifted steps** (`cluster/feet_step.py`, CPU). Per track and per cat, the four paws go through one state
+machine, one frame (0.1 s) at a time:
+- **Planted.** When a paw comes down (Pikachu's contact rule: tip at most 2 cm above Pikachu's lowest point), it is
+  held where it came down, sideways. In height it is held no higher than its rest offset above the cat's lowest point,
+  as before.
+- **Step.** When holding it would need a correction over 4 cm (the earlier cap), the paw steps instead. It spends two
+  frames in the air, 3 cm up, a third and then two thirds of the way. It then lands at its natural place plus a lead:
+  its natural move over the next 3 frames, capped at 2.4 cm. The lead lets the next hold last longer.
+- **Gait rule.** At most two paws are in the air at once, and never both fronts or both hinds. The paw needing the
+  largest correction goes first. A paw that must wait is held at the 4 cm limit and slides with the body until it can
+  step.
+- **The motion's own lifts.** When the motion itself lifts a paw over 2 cm, the paw follows the motion again, easing
+  out over 2 frames as before.
+- **Legs.** The correction moves the paw and lower leg as before: weight 1 at the paw tip, falling to 0 at 60% of the
+  leg's height.
+- **Both cats.** Both use Pikachu's contacts. Each cat's steps are worked out from its own paw places. The grey cat's
+  raised front leg is not touched (its model has one fused front leg).
+
+**Measures:** the same yardsticks as the second form, after the fix, on recorded frames and walks apart, for each cat:
+- slow skating: the share of down steps moving 1.5 to 3 cm in 0.1 s;
+- M1: the share over 1.5 cm;
+- added steps per paw per second of down time;
+- the median length of a planted stretch;
+- stretch: the grey cat's 99th percentile over its own video's, and Pikachu's share of edges stretched over 30%.
+
+**Kept, judged per cat, only if all of these hold:**
+1. Slow skating is below 5% of down steps, on recorded frames and on walks (the pre-set bar).
+2. The median planted stretch lasts at least 0.3 s, so the paws don't tap.
+3. Stretch: the grey cat at most 1.5 times its own video's 99th percentile. Pikachu's edges over 30% rise by at most
+   1 percentage point (13.4% now).
+4. Renders: the ship-rule moments (recorded video 18 at 90 s and 40 s, walk 3 at 5 s and 15 s) look whole. A strip of
+   walk 3 from a low camera, every 0.1 s from 1 to 3 s, shows paws that stay put on the floor and then step, with no
+   jitter or broken legs.
+5. No console errors.
+
+If kept, the page gets the steps (`data/feet_step.*`) as version 18, and the At home note says paws are planted and
+steps were added where the motion glides. This holds for the recordings too, so the note will say the recorded motion
+is changed there. If not kept, the reason is recorded here. There is one try. If its renders show a flaw that is a bug
+rather than a tuning question, I get one more try, written here first.
+
+### Paws that stay planted: result (2026-11-17, 05:10; `experiments_feet/step`, CPU, 26 s)
+
+Read-outs applied as written (each cat; recorded frames, then walks):
+
+| | Pikachu rec | Pikachu walks | grey rec | grey walks |
+|---|---|---|---|---|
+| 1. slow skating (1.5 to 3 cm), before -> after | 15.6% -> **2.6%** | 15.5% -> **1.9%** | 15.5% -> **5.7%** | 15.5% -> **3.9%** |
+| M1 (over 1.5 cm), before -> after | 42% -> 6.0% | 34% -> 4.0% | 38% -> 14% | 31% -> 8.0% |
+| 2. median planted stretch | **0.2 s** | 0.3 s | **0.2 s** | 0.3 s |
+| added steps per paw per second down | 1.1 | 0.9 | 1.1 | 0.9 |
+| planted frames held waiting at the 4 cm limit | 3.0% | 2.1% | 3.1% | 2.2% |
+
+- **3. Stretch:** fine. The grey cat's 99th percentile is 0.71 of its own video's. Pikachu's edges over 30% go from
+  11.9% to 12.1% on 80 frames where a paw carries over 2 cm.
+- **Grey floating paws** (for the record): 41% -> 35% recorded, 47% -> 39% walks.
+- **Why the stances are short:** 74% of planted stretches end in an added step, after a median 0.2 s (recorded) or
+  0.3 s (walks). The motion's own down stretches last a median 0.7 s. The glides are fast enough that 4 cm of leg
+  plus a 2.4 cm lead covers only two or three frames. This is a tuning question (the cap and the lead), not a bug.
+
+### Paws that stay planted: renders and outcome (2026-11-17, 05:21)
+
+**Not kept, for either cat; the page stays at version 17.**
+- **Pikachu** fails rule 2 on recorded frames: the median planted stretch is 0.2 s. It passes rules 1 and 3, and on
+  walks it passes 1 to 3.
+- **The grey cat** fails rules 1 and 2 on recorded frames: 5.7% slow skating and 0.2 s stances.
+
+**Renders:**
+- **Ship-rule moments** (page, steps on, both cats; `experiments_feet/step/ship_steps_on.png`): whole, as in
+  version 17.
+- **No console errors.** Checked with walk 3 playing with the grey cat.
+- **Walk 3 strip.** From the page's low camera, the room scan blocks the view or the cat faces away. So the strip is
+  rendered offline: the cat alone, posed as the page does, with a fixed side camera, steps off and on
+  (`cluster/feet_step_strip.py`, `LEGS=1`; `experiments_feet/step/legs_walk3_{p,g}.png`, paw tips marked).
+- **Pikachu, steps on:** the steps read as steps, one paw lifted at a time while the others stay put. But on several
+  frames (1.1, 1.2, 1.6, 2.2 and 3.0 s) the lower leg bends into a hook. The paw tip moves fully while the leg above it
+  moves less, so the leg kinks where the weight runs out. At the page's usual distance the ship-rule renders don't show
+  it.
+- **Also seen on Pikachu:** the -x front paw hovers about 3 cm up and glides 2 cm per 0.1 s from 2.1 to 3.0 s, with
+  steps off and on. It doesn't count as down, so neither the fix nor the measure touches it.
+- **The grey cat, steps on:** thin spikes on its legs on several frames (1.0, 1.3 and 1.4 s), on top of its fused
+  front leg.
+
+**What was learnt:**
+- The sliding is the body gliding over still legs. Planting paws and adding short lifted steps removes most of it:
+  Pikachu's slow skating fell from 15.6% to 2.6%, and its share of down steps over 1.5 cm from 42% to 6%.
+- Two things stand in the way of keeping it:
+  - with a 4 cm reach, stances last only 0.2 to 0.3 s on fast glides;
+  - moving the lower leg by a straight weight fall-off kinks it.
+- A next try would bend each leg at its joints: two-bone reach through the skeleton's own leg bones, instead of
+  sliding the leg's vertices. That gives a longer reach without kinks, and so longer stances.
+- The page code (loading `feet_step`, applying it before normals, the `steps=0` and `azim=` address settings) is saved
+  as a patch outside the repo. The data is removed from `viewer/data`.
+
+## Paws that stay planted, bent at the joints (plan, written 2026-11-17 at 05:26, before running; demo only)
+
+The user said "Yes, try it" to bending each leg at its own joints.
+
+**Skeleton** (a diagnostic, no fix run; `experiments_feet/skel_map.py`):
+- Pikachu's 25 bones are Lab4D's quadruped joints. Joint j (the page's numbering, 1 to 25) sits at the origin of bone
+  j-1, 0.0 to 0.1 mm over 600 recorded frames.
+- The legs are four chains of four joints each:
+  - front +x: 5 -> 6 -> 7 -> 8 (bones 4 to 7);
+  - front -x: 9 -> 12 (bones 8 to 11);
+  - hind +x: 18 -> 21 (bones 17 to 20);
+  - hind -x: 22 -> 25 (bones 21 to 24).
+  The last joint of each chain is the paw.
+- Segment lengths vary a little from frame to frame: 3 to 9 mm standard deviation on 4 to 11 cm segments. The skin
+  around each joint follows that joint's bone.
+
+**Change** (`cluster/feet_ik.py`, CPU). The same plant-and-step state machine as the last try, with one difference:
+the leg no longer moves by sliding its surface. Each frame, every leg with a correction is solved as a two-bone chain:
+- **The chain.** The top joint (shoulder or hip) stays put. The middle joint bends, keeping the leg's own bending
+  direction. The third joint (wrist or hock) goes to where it was plus the paw's correction, and the paw follows it
+  without turning, so it stays flat.
+- **The bones.** The four bones of the leg are turned and moved with their joints:
+  - the top bone turns with the upper segment;
+  - the middle bone takes half of the upper segment's turn and half of the lower's;
+  - the wrist or hock bone takes half of the lower segment's turn;
+  - the paw bone only moves.
+  The skin blends between them, as it already does.
+- **Limits.** A paw is held while its correction is at most 8 cm sideways and the chain can reach it at no more than
+  97% of its full length. Otherwise it steps, as before: two frames in the air, 3 cm up. It lands at its natural place
+  plus a lead of its natural move over the next 3 frames, now capped at 4 cm.
+- **Unchanged from the last try:** the gait rule, at most 2 cm of lowering, the motion's own lifts, and Pikachu's
+  contacts.
+- **The grey cat** follows Pikachu's bent bones through its usual retarget. It gets no solve of its own.
+- **On the page,** each frame's paw corrections are stored, and the page solves the same chains before skinning. Its
+  result is checked against the cluster's on a few frames: the joints must agree within 1 mm.
+
+**Measures:** as in the last try. The paw places are now read from the re-posed meshes, not from targets. Stretch is
+measured on 80 frames where a joint moves over 2 cm.
+
+**Kept, judged per cat, only if all of these hold:**
+1. Slow skating is below 5% of down steps, on recorded frames and on walks.
+2. The median planted stretch lasts at least 0.3 s, on recorded frames and on walks.
+3. Stretch: the grey cat at most 1.5 times its own video's 99th percentile. Pikachu's edges over 30% rise by at most
+   1 percentage point.
+4. Renders:
+   - the ship-rule moments (page) look whole;
+   - the walk 3 side strips (1 to 3 s, legs close up, steps off and on) show paws that stay put and then step, with no
+     hooks, spikes, broken legs, or dented flanks.
+5. No console errors, and the page's chains agree with the cluster's.
+
+If kept, this is version 18. If not, the reason is recorded here. There is one try.
+
+### Paws that stay planted, bent at the joints: result and outcome (2026-11-17, 05:31; `experiments_feet/ik`, CPU, 1 min 42 s)
+
+**Not kept, for either cat; the page stays at version 17.** Every measured rule fails.
+
+| | Pikachu rec | Pikachu walks | grey rec | grey walks |
+|---|---|---|---|---|
+| 1. slow skating, before -> after | 15.6% -> 11.6% | 15.5% -> 13.2% | 15.5% -> 13.3% | 15.5% -> 12.6% |
+| M1 (over 1.5 cm), before -> after | 42% -> 29% | 34% -> 26% | 38% -> 35% | 31% -> 26% |
+| 2. median planted stretch | 0.2 s | 0.2 s | 0.2 s | 0.2 s |
+| added steps per paw per second down | 3.3 | 3.2 | 3.3 | 3.2 |
+| planted frames held waiting (sliding) | 67% | 84% | 67% | 84% |
+
+- **3. Stretch:** Pikachu's edges over 30% go from 12.8% to 14.4% on 80 frames where a joint moves over 2 cm, past the
+  1-point limit. The grey cat moves cleanly (0.81 of its own video).
+- The page's solver was written but not checked against the cluster's, and no strips were rendered: the measures
+  had already settled it.
+
+**Why** (`experiments_feet/reach_diag.py`):
+- While a paw is down, the leg from its top joint to its wrist or hock is almost fully straight: 99.2%, 99.7%, 99.9%
+  and 99.4% of its full length (medians; -x front, +x front, -x hind, +x hind). 87 to 100% of these frames are over
+  the 97% the rule allowed.
+- So the reach rule refused even the motion's own pose, and most planted paws waited and slid.
+- Loosening that rule would not help. A straight leg of fixed length cannot keep its paw still while the hip glides
+  along at the same height; it would have to lengthen. Bending at the joints can only shorten a leg, and here no leg
+  has slack to give.
+- The earlier surface-sliding fix got its 4 cm by stretching the lower leg, which is where its hooks came from.
+
+**What was learnt:**
+- The motion carries the body at a steady height on straight legs. A paw can only stay planted if either:
+  - the body dips and rises as it passes over the paw, as a real cat's does; or
+  - the leg lengthens a little.
+- The model's own segments already vary by 3 to 9 mm (about 5%) from frame to frame. A next try could let each chain
+  lengthen within that range: about 6 cm of hold on a 20 cm leg, with the stretch spread over the joints rather than
+  kinked at the paw.
+- The page's leg solver (`bendLegs`, `iktest=` address setting) is saved as a patch outside the repo.
+
+## Paws that stay planted, legs that may lengthen (plan, written 2026-11-17 at 05:38, before running; demo only)
+
+The user said "Yes, try it" to letting each leg lengthen by up to 5% while a paw is planted.
+
+**Change** (`cluster/feet_ik.py`, with the joint-bending try's state machine and gait rule):
+- **Lengthening.** When a chain's target is beyond 99.9% of its full length, both its segments may lengthen by the
+  same factor, up to 1.05. The model's own segments already vary by about 5% from frame to frame. The stretch sits
+  at the joints, where the skin blends between bones.
+- **Holding.** A paw is held while its correction is at most 8 cm sideways and the target is within the lengthened
+  chain's reach (1.05 x 99.9% of full length). Otherwise it steps, as in the last two tries.
+- **Bend direction.** The middle joint now keeps the leg's own bend direction relative to the line from the top joint
+  to the wrist or hock, turned with that line, so a nearly straight leg doesn't flip its knee. If the leg is straight
+  to within 0.1 mm, the last try's rule is used.
+- Everything else is unchanged: bones, gait, lift, lead (4 cm), lowering, contacts, and the grey cat following
+  Pikachu's bones.
+
+**Measures and keep rule:** exactly as in "bent at the joints" (rules 1 to 5, judged per cat). That includes the
+check that the page's solver matches the cluster's within 1 mm, and the walk 3 side strips with no hooks, spikes,
+broken legs or dented flanks. Also reported: how often a chain is lengthened, and by how much (median and 99th
+percentile). If kept, this is version 18. There is one try.
