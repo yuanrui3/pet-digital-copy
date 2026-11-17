@@ -908,3 +908,82 @@ The user said "Yes, try it" to letting each leg lengthen by up to 5% while a paw
 check that the page's solver matches the cluster's within 1 mm, and the walk 3 side strips with no hooks, spikes,
 broken legs or dented flanks. Also reported: how often a chain is lengthened, and by how much (median and 99th
 percentile). If kept, this is version 18. There is one try.
+
+### Paws that stay planted, legs that may lengthen: result (2026-11-17, 05:40; `experiments_feet/ik2`, CPU, about 2 min)
+
+| | Pikachu rec | Pikachu walks | grey rec | grey walks |
+|---|---|---|---|---|
+| 1. slow skating, before -> after | 15.6% -> **5.0%** (5.02) | 15.5% -> 3.6% | 15.5% -> **12.1%** | 15.5% -> **10.3%** |
+| M1 (over 1.5 cm), before -> after | 42% -> 17% | 34% -> 9.2% | 38% -> 32% | 31% -> 23% |
+| 2. median planted stretch | **0.2 s** | 0.3 s | **0.2 s** | 0.3 s |
+| added steps per paw per second down | 1.7 | 1.7 | 1.7 | 1.7 |
+| planted frames held waiting (sliding) | 7.0% | 7.8% | 7.0% | 7.8% |
+| paw off its target while down, median / p90 | 0.01 / 0.06 cm | 0.01 / 0.05 cm | 0.17 / 1.7 cm | 0.19 / 1.6 cm |
+
+- **Lengthening:** chains are lengthened on 26% of paw-frames, by a median 2.6% and at most 5%.
+- **Joint moves** where a leg is bent: median 3.9 cm, 99th percentile 8.0 cm.
+- **3. Stretch:** Pikachu's edges over 30% go from 13.1% to 14.2%, which is **1.1 points**, past the 1-point limit.
+  The grey cat moves cleanly (0.81 of its own video).
+- **The grey cat** only follows Pikachu's bent bones through its retarget, so its paws end up 1.6 to 1.7 cm off target
+  (p90) and keep skating.
+- **Grey floating paws** (for the record): 41% -> 33% recorded, 47% -> 37% walks.
+- **By the rule, neither cat is kept:**
+  - Pikachu fails 1 on recorded frames (5.02% against below 5%), 2 on recorded frames (0.2 s) and 3 (+1.1 points);
+  - the grey cat fails 1 and 2.
+
+### Paws that stay planted, legs that may lengthen: strip and outcome (2026-11-17, 05:43)
+
+**Not kept; the page stays at version 17.** Pikachu fails rules 1 (recorded), 2 (recorded) and 3, each narrowly or
+nearly so. The grey cat fails 1 and 2.
+
+- **Pikachu's walk 3 side strip** (`experiments_feet/ik2/legs_walk3_p.png`, legs close up, steps off and on): the legs
+  now move as whole limbs. There are no hooks, no spikes and no dented flanks. Paws lift and land whole, and front
+  and hind legs spread and close like a walking stance (for example 1.0, 1.7 and 2.5 s). This is the most natural of
+  the three tries by eye.
+- **Shoulders:** because each front leg turns about its top joint, high on the shoulder, the outline of the chest
+  moves a little with it. That is expected and looks like a shoulder.
+- **Not done**, since the measures had already decided: the page solver check and the page renders.
+- **Comparison with the surface-sliding try:**
+  - this try skates more on recorded frames (5.0% against 2.6%);
+  - stances are the same (0.2 s recorded, 0.3 s walks);
+  - stretch is about the same (+1.1 against +0.2 points on its own frames);
+  - but the legs stay whole.
+- **On walks alone,** Pikachu passes rules 1 and 2 (3.6%, 0.3 s).
+- **The page code** (lengthening and bend direction included) is saved as a patch outside the repo.
+
+### Paws that stay planted on the copy's walks: the user's decision (2026-11-17, 05:44)
+
+The user chose "Yes, walks only": publish the lengthening try anyway, for Pikachu, on the copy's walks only. It
+failed the pre-set rule (above), so this goes on the page **by the user's decision, not by the rule.**
+
+**Scope:**
+- **Applied:** Pikachu on every walk, spot and call run, and on the copy's half of the replays.
+- **Not applied:**
+  - the 19 recordings, which stay the real cat's estimated motion, as before;
+  - the pale real cat beside a replay;
+  - the grey and white cat, which follows only Pikachu's bones and gains little (10 to 12% skating).
+
+**On walks,** Pikachu meets the skating rule (3.6%) and the stance rule (0.3 s). Stretch, measured over recorded and
+walk frames together, rose 1.1 points against a 1-point limit.
+
+**Checks before publishing** (as in rule 5):
+- the page's solver agrees with the cluster's within 1 mm on the test walk frames;
+- no console errors;
+- the ship-rule walk moments (walk 3 at 5 s and 15 s) look whole;
+- recorded video 18 at 90 s is unchanged from version 17.
+
+### Paws that stay planted on the copy's walks: checks and version 18 (2026-11-17, 05:47)
+
+- **Page solver against the cluster's:** the largest difference in any bent bone matrix entry is 2e-5 (metres for
+  positions) over the three test walk frames, well inside 1 mm.
+- **No console errors.** Checked by playing walk 3, switching to recorded video 18, then the grey cat, then back.
+- **Renders** (headless page, zoom 0.4):
+  - recorded video 18 at 90 s is pixel-identical with and without the fix (0 pixels differ);
+  - walk 3 at 5 s and at 15 s look whole, with the legs in a new stance and a front paw mid-step;
+  - the faint crease on the side at 15 s is there without the fix too.
+- **Published as version 18 of Pikachu's Keep**, by the user's decision. It adds:
+  - `data/feet_ik.*`: walk frames only, 1.3 MB of paw corrections plus the chains' rest joints;
+  - the leg solver (`bendLegs`);
+  - the `steps=0` and `iktest=` address settings;
+  - a paragraph in the At home note. It says the steps missed one part of the pre-set bar (stretch) and are shown
+    anyway.

@@ -160,7 +160,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
 
   <div class="notes">
     <div class="note"><h2>Body</h2><p id="note-body">A 3D reconstruction (Lab4D) of a twelve-second video of the cat. For a test, the model never saw the colours of the shaded stretch of the timeline. "As trained, frame by frame" shows how its idea of the lighting drifted there; "Steady coat" uses one well-lit moment for the whole clip.</p><p>"Photo coat" is not the model's own colouring: it paints the video's pixels onto the model's surface, using the model's camera and pose for each of the 76 frames. Each spot takes its colour from the frames that saw it most head-on and agree with each other; spots the camera never saw well, such as the belly, keep the model's colours.</p></div>
-    <div class="note"><h2>At home</h2><p>The room is the owner's phone scan. The lines are where the cat actually went in 19 home videos over a month (19 minutes in all). The cat here is Agent-to-Sim's reconstruction of Pikachu from that whole month, and it moves its body exactly as it did on camera: eating, sitting by the litter box, curling up on the sofa. The small orange phone marks the person filming.</p><p>Each frame the cat is lowered or raised onto the scan's floor when it is within 8 cm of it (left alone further up, as on the sofa). Placed as recorded, its paws were mostly inside the floor: by 2 cm on the recordings and 4 cm on the copy's walks (median), and by over 7 cm a tenth of the time; now by under 0.1 cm (median), and within about 2 cm eight times in ten. Its paws still slide at times: a paw that is down moves 1.5 cm or more in 0.1 s on about a third of the steps (42% in the recordings, 34% in the copy's walks), so this comes with the recorded motion itself, not only with the copy.</p></div>
+    <div class="note"><h2>At home</h2><p>The room is the owner's phone scan. The lines are where the cat actually went in 19 home videos over a month (19 minutes in all). The cat here is Agent-to-Sim's reconstruction of Pikachu from that whole month, and it moves its body exactly as it did on camera: eating, sitting by the litter box, curling up on the sofa. The small orange phone marks the person filming.</p><p>Each frame the cat is lowered or raised onto the scan's floor when it is within 8 cm of it (left alone further up, as on the sofa). Placed as recorded, its paws were mostly inside the floor: by 2 cm on the recordings and 4 cm on the copy's walks (median), and by over 7 cm a tenth of the time; now by under 0.1 cm (median), and within about 2 cm eight times in ten. In the recordings its paws still slide at times: a paw that is down moves 1.5 cm or more in 0.1 s on 42% of the steps, because the estimated motion glides the body along on nearly straight legs.</p><p>On the copy's own walks Pikachu's paws are planted: a paw that comes down stays where it landed, each leg bending at its own joints (and lengthening by up to 5%, about as much as the model's legs vary anyway) to keep it there, and when it can reach no further it takes a short step, two paws at most in the air at once. Slow skating (1.5 to 3 cm in 0.1 s) fell from 16% to 4% of steps, and the paws that slide 1.5 cm or more from 34% to 9%. It missed one part of the bar set before the try: the skin stretches a little more than allowed (edges stretched by over 30%: 1.1 points more, against a limit of 1). It is shown anyway, because the steps look far more natural than gliding. The recordings are left as estimated, and the grey and white cat is left as it was.</p></div>
     <div class="note"><h2>The copy on its own</h2><p>In these walks nothing is replayed: a behaviour model (Agent-to-Sim's, trained here on 17 of the 19 videos) picks where the cat goes next, 5.6 s at a time, and how its body moves, for about a minute. Each walk starts from a real moment in one of the two videos it never trained on. Asked to predict those two videos 5.6 s ahead, it placed the route about twice as close as replaying the cat's most similar recorded moments (0.16 m off against 0.35 m), but its guesses of where the cat ends up bunched together and were barely better (0.78 m against 0.79 m).</p><p>So these walks use a changed goal choice, with no retraining: every 5.6 s, a quarter of the time the copy heads for one of the spots where the real cat often ended up (within 3 m of where it is), otherwise for a place of its own choosing. A quarter was picked so that the walks move as much as the real cat does in the videos it trained on: 0.56 m per 5.6 s on average, against the real cat's 0.54 m (heading for a spot half the time made them move 0.86 m; never, 0.23 m). Scored on the two unseen videos, the best of its 16 guesses landed 0.57 m from where the cat really went, against 0.78 m before and 0.76 m for guessing the cat's usual spots alone, and it also did better on a score that does not reward scattered guesses. The walks under "Where you put the person" and "Calling the cat" keep the old goal choice, since their results were measured with it.</p></div>
     <div class="note"><h2>Where you put the person</h2><p>Press "Place the person" and click near one of the 12 rings, the places where people really stood while filming. The copy then walks for 34 s with the person standing there; where the person is, is the only thing it reacts to. Under "The copy beside the real cat", the copy and the real cat (pale) start together in the two videos it never trained on, with the person moving as they really did.</p><p>It does react: moving the person to the opposite side of the cat changes where the copy heads by about 0.57 m, against 0.02 m between two random draws, and removing the person changes it by 0.46 m. But it does not simply head for the person: after the move it shifts toward the person's new side only 59% of the time, and it ends up nearer the person 41% of the time, about as often as the real cat did (38%). The person filming usually follows the cat, so the model may have learned where the person goes rather than how the cat responds.</p></div>
     <div class="note"><h2>Calling the cat</h2><p>Press "Call the cat" and click one of the 12 blue spots, places where the real cat often was (on the floor or up on furniture). The copy is given that spot as its goal and gets there by its own route and gait, then carries on by itself.</p><p>What else it reacts to: switching off its view of the room shifts where it heads by about 0.12 m, against 0.02 m between two random draws; yet its goals land where the real cat has been almost as often without the room (87%) as with it (90%). A person walking matters far more: compared with the same person walking away, the copy's goal moves about a metre, and in 4 of 5 moments an approaching person pushes it away. That may be the filming habit again: the person walked toward the cat mostly when it was leaving, and the model cannot tell the two apart.</p></div>
@@ -591,6 +591,14 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
       try { const W = await load("a2s_walks"); a2s.walks = W.v.bones.data; a2s.walkFrames = W.meta.frames_per_run; } catch (e) {}
       // the floor fix: per frame, how far to lower (or raise) the cat so it stands on the room scan's floor
       try { const FL = await load("feet_floor"); a2s.dyRec = FL.v.rec_dy.data; a2s.dyWalk = FL.v.walk_dy.data; } catch (e) {}
+      // planted paws on the copy's walks (not the recordings): per walk frame and paw, where to move the paw (the
+      // cat's own frame); each leg is then bent at its own joints to put it there (steps=0 in the address turns it off)
+      if (new URLSearchParams(location.search).get("steps") !== "0") {
+        try {
+          const FK = await load("feet_ik");
+          a2s.ik = { walk: FK.v.walk.data, chains: FK.meta.chains, Jr: FK.meta.rest_joints, stretch: FK.meta.stretch || 1 };
+        } catch (e) {}
+      }
     } catch (e) {}
     // the recorded skeleton (Lab4D's quadruped: 25 joints in the cat's own frame); parent 0 is drawn at spine 1
     const PARENT = { 1: 0, 13: 0, 18: 0, 22: 0, 2: 1, 3: 2, 4: 3, 5: 3, 9: 3, 6: 5, 7: 6, 8: 7, 10: 9, 11: 10, 12: 11,
@@ -737,10 +745,65 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     setHomeTime(0);
   }
   // move the skinned cat: each vertex follows its four strongest bones (rest -> this frame)
-  function poseA2S(a, src, base, mesh) {
+  function poseA2S(a, src, base, mesh, pre) {
     const bf = a.bf, n = a.B * 12;
     for (let k = 0; k < n; k++) bf[k] = half(src[base + k]);
+    if (pre) pre(bf);
     skinMesh(bf, a.rest, a.idx, a.w, a.V, mesh);
+  }
+  // planted paws: bend each leg (top joint, middle joint, wrist or hock, paw) so its paw moves by this frame's
+  // correction. The top joint stays, the middle joint bends the way the leg already bends, the wrist goes to its place
+  // plus the correction and the paw follows without turning. Bones: top turns with the upper segment (R1), middle
+  // halfway between R1 and R2, wrist half of R2, paw only moved. bf: 3x4 bone matrices (rest -> pose), changed in place.
+  const m3 = {
+    mul: (A, B) => [0, 1, 2].flatMap((i) => [0, 1, 2].map((j) => A[3 * i] * B[j] + A[3 * i + 1] * B[3 + j] + A[3 * i + 2] * B[6 + j])),
+    tr: (A) => [A[0], A[3], A[6], A[1], A[4], A[7], A[2], A[5], A[8]],
+    app: (A, v) => [A[0] * v[0] + A[1] * v[1] + A[2] * v[2], A[3] * v[0] + A[4] * v[1] + A[5] * v[2], A[6] * v[0] + A[7] * v[1] + A[8] * v[2]],
+  };
+  const vsub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], vadd = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+  const vdot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], vlen = (a) => Math.hypot(a[0], a[1], a[2]);
+  const vsc = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+  function rotBetween(u, v) {  // smallest rotation taking unit u to unit v (Rodrigues)
+    const ax = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    const c = Math.min(Math.max(vdot(u, v), -0.999999), 1), K = [0, -ax[2], ax[1], ax[2], 0, -ax[0], -ax[1], ax[0], 0];
+    const KK = m3.mul(K, K), I = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    return I.map((x, k) => x + K[k] + KK[k] / (1 + c));
+  }
+  function halfTurn(R) {  // halfway from identity to R
+    const w0 = Math.sqrt(Math.max(1 + R[0] + R[4] + R[8], 1e-12)) / 2;
+    let w = w0 + 1, x = (R[7] - R[5]) / (4 * w0), y = (R[2] - R[6]) / (4 * w0), z = (R[3] - R[1]) / (4 * w0);
+    const s = 1 / Math.hypot(w, x, y, z); w *= s; x *= s; y *= s; z *= s;
+    return [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y), 2 * (x * y + w * z), 1 - 2 * (x * x + z * z),
+            2 * (y * z - w * x), 2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)];
+  }
+  function bendLegs(bf, offs, f, ik) {
+    const joint = (b) => { const o = 12 * b, J = ik.Jr[b];
+      return [bf[o] * J[0] + bf[o + 1] * J[1] + bf[o + 2] * J[2] + bf[o + 3], bf[o + 4] * J[0] + bf[o + 5] * J[1] + bf[o + 6] * J[2] + bf[o + 7],
+              bf[o + 8] * J[0] + bf[o + 9] * J[1] + bf[o + 10] * J[2] + bf[o + 11]]; };
+    const move = (b, Rd, c, c2) => {  // x -> Rd (x - c) + c2, after the bone's own transform
+      const o = 12 * b, R = [bf[o], bf[o + 1], bf[o + 2], bf[o + 4], bf[o + 5], bf[o + 6], bf[o + 8], bf[o + 9], bf[o + 10]];
+      const t = vadd(m3.app(Rd, vsub([bf[o + 3], bf[o + 7], bf[o + 11]], c)), c2), R2 = m3.mul(Rd, R);
+      for (let i = 0; i < 3; i++) { bf[o + 4 * i] = R2[3 * i]; bf[o + 4 * i + 1] = R2[3 * i + 1]; bf[o + 4 * i + 2] = R2[3 * i + 2]; bf[o + 4 * i + 3] = t[i]; }
+    };
+    for (let p = 0; p < 4; p++) {
+      const q = 12 * f + 3 * p, off = [half(offs[q]), half(offs[q + 1]), half(offs[q + 2])];
+      if (Math.max(Math.abs(off[0]), Math.abs(off[1]), Math.abs(off[2])) <= 1e-6) continue;
+      const [bt, bm, bw, bp] = ik.chains[p], H = joint(bt), K = joint(bm), W = joint(bw), P = joint(bp);
+      // beyond 99.9% of the chain's length both segments may lengthen by the same factor, up to ik.stretch
+      const a = vlen(vsub(K, H)), b = vlen(vsub(W, K)), dv = vsub(vadd(W, off), H), dn = Math.max(vlen(dv), 1e-9);
+      const s = Math.min(Math.max(dn / (0.999 * (a + b)), 1), ik.stretch), a2 = a * s, b2 = b * s;
+      const u = vsc(dv, 1 / dn), d = Math.min(Math.max(dn, Math.abs(a2 - b2) + 1e-3), 0.999 * (a2 + b2));
+      // the middle joint keeps the leg's own bend direction relative to the top-to-wrist line, turned with that line
+      const kh = vsub(K, H), w0 = vsub(W, H), w = vsc(w0, 1 / Math.max(vlen(w0), 1e-9)), pole0 = vsub(kh, vsc(w, vdot(kh, w)));
+      let pole = vlen(pole0) < 1e-4 ? vsub(kh, vsc(u, vdot(kh, u))) : m3.app(rotBetween(w, u), pole0);
+      pole = vsub(pole, vsc(u, vdot(pole, u)));
+      const v = vsc(pole, 1 / Math.max(vlen(pole), 1e-9));
+      const cosA = Math.min(Math.max((a2 * a2 + d * d - b2 * b2) / (2 * a2 * d), -1), 1), sinA = Math.sqrt(1 - cosA * cosA);
+      const K2 = vadd(H, vsc(vadd(vsc(u, cosA), vsc(v, sinA)), a2)), W2 = vadd(H, vsc(u, d));
+      const R1 = rotBetween(vsc(kh, 1 / a), vsc(vsub(K2, H), 1 / a2)), R2 = rotBetween(vsc(vsub(W, K), 1 / b), vsc(vsub(W2, K2), 1 / b2));
+      const Rm = m3.mul(R1, halfTurn(m3.mul(m3.tr(R1), R2)));
+      move(bt, R1, H, H); move(bm, Rm, K, K2); move(bw, halfTurn(R2), W, W2); move(bp, [1, 0, 0, 0, 1, 0, 0, 0, 1], P, vadd(P, vsub(W2, W)));
+    }
   }
   // the grey and white cat on Pikachu's motion. The two skeletons' bones do not match by name (both were learnt
   // freely), so each grey bone moves rigidly with the blend of Pikachu's bones that move the part of Pikachu its own
@@ -758,9 +821,10 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     const s = 1 / Math.hypot(w, x, y, z);
     out[4 * k] = w * s; out[4 * k + 1] = x * s; out[4 * k + 2] = y * s; out[4 * k + 3] = z * s;
   }
-  function poseGrey(g, a, src, base, dx, dy, dz) {
+  function poseGrey(g, a, src, base, dx, dy, dz, pre) {
     const pf = a.bf, n = a.B * 12, pq = g.pq;
     for (let k = 0; k < n; k++) pf[k] = half(src[base + k]);
+    if (pre) pre(pf);
     for (let k = 0; k < a.B; k++) quatOf(pf, 12 * k, pq, k);
     const bf = g.bf, C = g.centre;
     for (let i = 0; i < g.B; i++) {
@@ -847,8 +911,12 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     if (a) {
       const src = tr.kind === "rec" ? a.bones : a.walks && a.walkStart[tr.walk] !== undefined ? a.walks : null;
       const base = (tr.kind === "rec" ? tr.jointBase + t : src ? a.walkStart[tr.walk] + t : 0) * a.B * 12;
+      // planted paws: Pikachu on the copy's own walks only (the recordings stay as estimated; the grey cat follows
+      // only Pikachu's bones and gains little, so it is left as it was)
+      const S = a.ik, fi = tr.kind === "copy" && src ? a.walkStart[tr.walk] + t : -1;
+      const pre = S && fi >= 0 ? (bf) => bendLegs(bf, S.walk, fi, S) : null;
       if (src && home.grey && home.grey.on) poseGrey(home.grey, a, src, base, h[9 * i + 3], h[9 * i + 4], h[9 * i + 5]);
-      else if (src) poseA2S(a, src, base, a.mesh);
+      else if (src) poseA2S(a, src, base, a.mesh, pre);
       // beside a replay: the real cat at the same moment of the same recording, as a lighter ghost
       const rec = tr.sub === "replay" ? home.tracks[tr.video] : null;
       a.ghostHolder.visible = !!rec && t < rec.frames;
@@ -1015,13 +1083,25 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
   show(location.hash === "#home" ? "home" : "body");
   bodyCamReady = true;
   resize();
-  loadHome().then(() => {
+  loadHome().then(async () => {
     if (qs.has("video")) { $("home-video").value = qs.get("video"); setVideo(+qs.get("video")); }
     if (qs.has("elev")) {  // camera height as an angle above the cat (degrees), same distance and direction
       const o = home.view.pos.clone().sub(home.view.target), L = o.length(), d = Math.hypot(o.x, o.z), e = +qs.get("elev") * Math.PI / 180;
       home.view.pos.copy(home.view.target).add(new THREE.Vector3(o.x / d * L * Math.cos(e), L * Math.sin(e), o.z / d * L * Math.cos(e)));
     }
     if (qs.has("zoom")) home.view.pos.sub(home.view.target).multiplyScalar(+qs.get("zoom")).add(home.view.target);
+    if (qs.has("iktest") && home.a2s && home.a2s.ik) {  // the page's leg bending against the cluster's, on a few frames
+      const tests = await get("data/feet_ik_test.json", "json"), a = home.a2s, worst = [];
+      for (const tc of tests) {
+        const src = a.walks, base = tc.index * a.B * 12;
+        for (let k = 0; k < a.B * 12; k++) a.bf[k] = half(src[base + k]);
+        bendLegs(a.bf, a.ik.walk, tc.index, a.ik);
+        let w = 0;
+        tc.chain_bones.flat().forEach((b, k) => { for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) w = Math.max(w, Math.abs(a.bf[12 * b + 4 * i + j] - tc.bones[k][i][j])); });
+        worst.push(+w.toExponential(2));
+      }
+      document.body.dataset.iktest = JSON.stringify(worst);
+    }
     if (qs.has("call")) callCatTo(+qs.get("call"), false);
     if (qs.has("homecat")) { $("home-cat").value = qs.get("homecat"); $("home-cat").dispatchEvent(new Event("change")); }
     if (qs.has("place")) { const [px, pz] = qs.get("place").split(",").map(Number); placePersonAt(px, pz, false); }

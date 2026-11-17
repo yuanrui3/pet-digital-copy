@@ -371,7 +371,7 @@ def main():
 
     # ---- for the page: paw corrections (cat's own frame) and the chains' rest joints
     meta, nbytes = pack(os.path.join(out, "feet_ik.bin"), [("rec", loc16[:nrec]), ("walk", loc16[nrec:])])
-    json.dump({"blobs": meta, "bytes": nbytes, "paws": PAWS, "chains": CHAINS.tolist(), "rest_joints": np.round(Jr, 6).tolist(),
+    json.dump({"blobs": meta, "bytes": nbytes, "paws": PAWS, "chains": CHAINS.tolist(), "stretch": STRETCH, "rest_joints": np.round(Jr, 6).tolist(),
                "rec_frames": nrec, "walk_frames": int(len(track) - nrec), "units": "metres, the cat's own frame (y down)",
                "from": "paws planted, short lifted steps, legs bent at their joints (two-bone chains); feet_ik.py"},
               open(os.path.join(out, "feet_ik.json"), "w"))
