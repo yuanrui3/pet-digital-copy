@@ -311,3 +311,262 @@ and stands on or near the floor. Otherwise the coat version stays.
   white cat at home" and the grey cat's Body note are rewritten.
 - **Not done:** no measure of how closely its poses follow Pikachu's beyond the pictures; each grey bone moves as a rigid
   blend of several of Pikachu's bones, so sharp joint bends may be softened (not checked).
+
+## Feet and pose check (plan, written 2026-11-16 at 22:20, before any measurement)
+
+The user picked "Feet and pose check" from three directions. The page lines up only the grey cat's single lowest point
+with Pikachu's each frame, so its paws may slide or float, and nothing measures how closely its poses follow Pikachu's.
+Everything below is measured on what the page shows (version 15 data, posed exactly as the page does it), on all
+11,574 recorded frames and all 52,576 walk frames, CPU only (`cluster/feet_check.py`).
+
+- **Landmarks** (each cat's rest mesh, as in the retarget): the four paw tips (the 20 lowest vertices of each paw),
+  the nose (20 front-most) and the tail tip (20 highest of the rear fifth); each followed as the mean of its vertices.
+- **Contact:** a paw is down when its tip is at most 2 cm above that cat's lowest point (along the room's down) in
+  that frame.
+- **M1 paw slide** (each cat; recorded and walks apart): a step is a paw down in two frames running (0.1 s); its skid is
+  how far the tip moves sideways (across the room's down). Read-out: a cat's paws **slide** if more than 10% of steps
+  skid over 1.5 cm in 0.1 s; the grey cat **slides more than Pikachu** if its share is over 1.25 times Pikachu's.
+- **M2 floating paws:** for each paw that is down on Pikachu, how high the grey cat's same paw is above the grey cat's
+  lowest point. Read-out: **lands with Pikachu** if at most 15% of these are over 3 cm up; otherwise **floating paws**.
+- **M3 floor gap** (both cats share it, since the grey cat's lowest point is put at Pikachu's): on frames where
+  Pikachu's lowest point is within 10 cm of the room's floor (the page's floor height), its height above the floor.
+  Read-out: **on the floor** if the median is within 1.5 cm and the 10th to 90th percentiles within 3 cm; otherwise
+  **floats or sinks**.
+- **M4 pose closeness:** each landmark's move from its rest place, in the cat's own frame, relative to the cat's centre
+  (mean of every third vertex), divided by the cat's rest length from nose to the middle of its hind paws and given in
+  Pikachu's centimetres. Error = mean over the six landmarks of the grey cat's move minus Pikachu's, same frame.
+  Baseline = the same with Pikachu 5 s later on the same track (a different moment). Read-out (medians): **follows
+  closely** if the error is at most a third of the baseline, **loosely** if at most two thirds, otherwise **does not
+  follow**.
+- **M5 range:** for each landmark and axis, the spread (standard deviation) of the grey cat's moves over that of
+  Pikachu's; median over the 18. Read-out: **softened** below 0.8, **exaggerated** above 1.25, otherwise **same range**.
+  Also reported per landmark (paws apart from nose and tail tip).
+- **Pictures:** side views of the five frames with the largest M4 error, both cats, looked at by eye (the stretch
+  measure missed two failures before).
+
+**Fix, only if M1, M2 or M3 says so.** Precomputed per frame and paw, stored with the page data: while a paw is down
+(Pikachu's contacts for both cats, so they step together), hold it at the median place of that stretch of contact
+(sideways) and at the cat's lowest point (height), easing in and out over 2 frames, capped at 4 cm; the correction
+moves the paw and lower leg (weight 1 at the paw tip falling to 0 at 60% of the leg's height in the rest pose). M3
+failing: also put the lowest point on the floor when it is within 10 cm of it. **Kept only if** the slide share falls
+below 5% and floating paws below 15% on the same measures, the grey cat's stretch stays at most 1.5 times its own
+video's (99th percentile), and the ship-rule renders (recorded video 18 at 90 s and 40 s, walk 3 at 5 s and 15 s) look
+whole and the paws planted. M4 and M5 are for the record: no fix is planned from them.
+
+### Feet and pose check: result of the measures (2026-11-16, 22:50; `experiments_feet/check`, CPU, 70 s)
+
+Read-outs applied as written:
+- **M1 slide: slides**, both cats, recorded and walks. Share of paw-down steps skidding over 1.5 cm in 0.1 s:
+  Pikachu 42% recorded / 34% walks; grey cat 38% / 31% (**no more than Pikachu**). So most of the sliding is in
+  Pikachu's own motion (the recordings' estimated motion and the copy's walks), not from the retarget.
+- **M2: floating paws.** Where Pikachu's paw is down, the grey cat's same paw is over 3 cm up 41% (recorded) / 47%
+  (walks) of the time; by paw: +x front 100%, -x hind 51% / 75%, +x hind 17% / 16%, -x front 2% / 0%.
+- **M3: floats or sinks.** Frames near the floor: Pikachu's lowest point median 4.2 cm above the page's floor
+  (recorded; walks 2.3 cm), 10th to 90th percentiles -4.1 to +8.4 cm (walks -3.6 to +7.7).
+- **M4: follows loosely.** Median pose error 3.4 cm against 6.5 cm for Pikachu 5 s later (ratio 0.52; recorded 0.48,
+  walks 0.54). Worst five frames: four in recorded video 14 (Pikachu curled up, the grey cat more upright) and one in
+  video 18 at 149 s (the grey cat stretched long).
+- **M5: same range** (0.94; +x hind 1.34, +x front 0.84, -x hind 0.82).
+- **Side check** (`cluster/feet_sides.py`): each grey hind paw moves with Pikachu's same hind paw (bone-mix cosines
+  0.95 and 1.00), but both grey front paws move mostly with Pikachu's -x front leg (0.87 and 0.79; with Pikachu's +x
+  front leg 0.51 and 0.59).
+- Cause of M2 and of the mixed front legs, by the rest landmarks: the grey cat's rest pose (its own video's frame 50)
+  has its +x front paw 8 cm up and the hind paws one behind the other (1 cm apart sideways, 10 cm front to back).
+
+**Change, written before running it (22:55):** before the paw fix, re-pick the grey cat's rest frame
+(`home2_retarget.py REBASE=level`): of all its own frames, the best fit to Pikachu's rest among those standing square,
+the four paws level within 2.5 cm and each pair at least 4 cm apart sideways and at most 5 cm apart front to back
+(Pikachu's rest: 1.1 cm, 7.7 and 8.3 cm, 0.4 and 3.4 cm). It is kept if floating paws (M2) fall, the pose error (M4)
+grows by no more than a tenth, the stretch read-out still says "moves cleanly", and its renders look whole. Then the
+planned paw fix (contacts from Pikachu, paws held while down, lowest point onto the floor near it) on top, judged by the
+rule above. Since M3 depends on the floor height, the floor is checked against the room scan under the cat before the
+lowest point is moved onto it.
+
+**REBASE=level found no frame (23:00):** I stopped the search after the 79 best-fitting of the grey cat's 113 own
+frames (the other 34 fit Pikachu's rest worse); none stood square. Where four paws were found, the most level was
+within 3.8 cm but with its pairs 0.2 cm apart sideways; the best with pairs apart was frame 105 (level within 5.5 cm,
+6.1 cm apart, 8.7 cm front to back); most were 8 to 12 cm. So the rest pose cannot be fixed by picking another frame.
+
+**Change, written before running it (23:02):** square the current rest pose instead (`cluster/home2_square.py`).
+Bend the grey cat's rest mesh as rigidly as possible (ARAP: each vertex's neighbourhood keeps its shape as far as it
+can; cotangent weights) so each paw tip moves to a square stance: sideways and front to back, Pikachu's rest paw places
+about its centre scaled by the two cats' length ratio (grey 0.58 m, Pikachu 0.53 m); height, the grey cat's lowest paw
+now. Held: each paw (its tip and the vertices within 2 cm of it) moved with its tip; the body further than 18 cm from
+every paw tip (along the surface) kept in place; the legs in between bend. Then the correspondence and bone mixes are
+redone from the squared rest as before (bend with landmarks pinned, region mix). Kept by the rule above (floating paws
+fall, M4 grows by no more than a tenth, stretch "moves cleanly", renders whole), plus: the squaring itself stretches
+no edge by over 30% on more than 2% of leg edges.
+
+**First squaring try failed (23:10):** Pikachu's stance asked one grey hind paw to move 12.6 cm sideways (the grey
+cat's +x hind paw stands under the left of its body), and the bent mesh no longer showed four clear paws. **Change,
+before running it again:** the targets come from the grey cat's own legs: each paw straight below where its leg joins
+the body (the leg 10 to 14 cm up from the paw tip, along the surface), each pair at one front-to-back place and at least
+5 cm apart sideways (each paw kept on its own leg's side), all four at the height of its lowest paw. Rest of the plan
+and the keep rule unchanged.
+
+**Second squaring try (23:05): not kept.** Paw moves up to 8.6 cm (the raised +x front paw down) and 6.9 cm; level
+within 0.5 cm after it, but 2.55% of leg edges stretched over 30% (limit 2%), thin stretched spikes where the raised paw
+had been, and the paw search on the squared mesh found a front pair 0.8 cm apart rather than the targets 5 cm apart.
+Only 3,617 of 22,968 vertices were free to bend. **Last try, written before running it (23:10):** the same with the
+whole legs and lower body free to bend (held body further than 28 cm from every paw tip; each paw held within 2.5 cm of
+its tip), and one more keep condition: the paw search on the squared mesh finds each paw within 2 cm of its target. If
+this fails too, the squaring is dropped and only the paw fix runs, on the current rest.
+
+**Last squaring try (23:11): not kept, squaring dropped.** Leg edges stretched over 30%: 0.05% (fine); hind paws on
+their targets (0.0 cm); but the front paws were found 4.1 and 5.0 cm off theirs: part of the -x front paw stays where it
+was while its tip moves (side view, `experiments_home2/square2/home2_square.png`). As decided before the run, the grey
+cat keeps its current rest pose and only the paw fix follows. The paw fix cannot bring the +x front paw down (it is
+about 8 cm up and the fix is capped at 4 cm), so the grey cat is expected to fail the floating-paw part of the keep
+rule; the paw fix is therefore judged per cat: Pikachu on slide (below 5%) and renders; the grey cat on the whole rule.
+
+**Paw fix as planned (23:12, `cluster/feet_fix.py`, `experiments_feet/fix`): not kept.** The correction hit its 4 cm
+cap on 53 to 77% of down frames; slide share 42% -> 36% (Pikachu recorded), 34% -> 29% (Pikachu walks), 38% -> 29% and
+31% -> 23% (grey); grey floating 41% -> 28% / 47% -> 32% (+x front still 99%). Why: by height alone a paw counts as down
+for seconds at a time while the whole cat turns, shuffles or lies, so one held place per stretch is wrong. Stretch was
+not the problem (grey 0.80 of its own video; Pikachu's edges over 30% 13.4% -> 13.6%).
+
+**Floor check (same run): M3's yardstick was wrong.** The page's floor (2nd percentile of the scan's heights) is
+7.3 cm below the scan's surface under the paws (median of scan points within 6 cm sideways; p10 to p90 -10.1 to -2.7
+cm). Against that surface the paws that are down sit 3.3 cm *inside* the floor (median; p10 10.4 cm inside, p90 3.6 cm
+above). So the cat mostly sinks into the floor rather than floating; M3 as written (page floor) said it floats.
+
+**Change, written before running it (23:15):**
+- **Floor first** (`cluster/feet_floor.py`): the scan's floor level = the densest 1 cm band of heights in its bottom
+  30 cm; under the cat = median height of scan points within 10 cm of that band and 8 cm sideways of the cat's lowest
+  down paw (else its root). Each frame the cat is raised or lowered by the gap when its lowest point is within 8 cm of
+  that surface (fading to nothing at 12 cm, so jumps onto furniture are left alone), smoothed over 0.5 s. Read-out as
+  M3 but against the scan under the cat: **on the floor** if the median is within 1.5 cm and the 10th to 90th
+  percentiles within 3 cm. Kept if it reads "on the floor" and renders show paws on the floor (not inside it).
+- **Paw hold, second form**: held only while down and moving less than 3 cm sideways in 0.1 s (faster is a step, and
+  ends the hold); same cap, easing and leg weights. M1 is unchanged, so steps faster than 3 cm still count as slides;
+  also reported: the share of down steps skidding 1.5 to 3 cm (the slow skating the hold is for). Kept if that share
+  falls below 5% and the stretch and renders hold; M1's own read-out is reported as it comes out.
+- The grey cat's raised +x front paw stays (no fix found here); recorded as not done.
+
+### Feet and pose check: outcome (2026-11-16, 23:20)
+
+- **Floor fix (`cluster/feet_floor.py`, `experiments_feet/floor`): kept.** The scan's floor level came out 6.5 cm above
+  the page's floor height. Against the scan under the cat, frames near the floor (46% of recorded, 54% of walk
+  frames): before, the lowest point was median 2.2 cm inside the floor (recorded; walks 4.1 cm), 10th to 90th
+  percentiles 7.4 cm inside to 3.9 cm above (walks 8.3 inside to 2.3 above): **floats or sinks**; after, median 0.1 cm
+  inside (both), 1.8 inside to 0.8 above (walks 2.2 inside to 0.4 above): **on the floor**. Median correction 0.6 cm
+  (recorded) and 1.6 cm (walks); largest 8 cm. Renders from a low camera (new address setting `elev`, degrees): before,
+  the legs disappear into the floor at recorded video 8 at 46 s, walk 2 at 23 s and walk 6 at 50 s; after, the paws
+  stand on the floor or rug. The grey cat shares the fix (its lowest point is put at Pikachu's).
+- **Paw hold, second form (`cluster/feet_fix.py`, STEP=0.03, `experiments_feet/fix2`): not kept.** Held 80% of
+  Pikachu's down paw-frames; slow skating (1.5 to 3 cm in 0.1 s) 15.6% -> 6.8% of down steps (Pikachu recorded),
+  15.5% -> 7.3% (walks), grey 15.5% -> 8.5% and 15.5% -> 7.7%: above the 5% bar. M1 after: 34% and 27% (Pikachu), 29%
+  and 22% (grey): still slides. Correction capped on 14% (Pikachu) to 44% (grey walks) of down frames. Stretch fine
+  (grey 0.80 of its own video). Not put on the page.
+- **Ship-rule renders with the floor fix** (grey cat; recorded video 18 at 90 s and 40 s, walk 3 at 5 s and 15 s): whole,
+  as in version 15. No console errors (a replay with the pale real cat, and a spot walk with the grey cat).
+- **On the page:** version 16 of Pikachu's Keep: the floor fix (data/feet_floor.*) for both cats and the pale real cat;
+  the "At home" note says so, with the remaining slide; the grey cat's note gives the pose closeness (M4) and says its
+  +x front paw stays up and why.
+- **Not done:** the grey cat's raised +x front paw (about 8 cm up on every frame; its rest pose comes from a frame where
+  that paw was lifted, no frame of its own video stands square, and bending the rest mesh left part of a paw behind;
+  posing it square through its own skeleton would be the next thing to try). Sliding paws: about a third of down steps
+  slide over 1.5 cm in 0.1 s in Pikachu's own motion (recorded and walks); holding them halves the slow skating but does
+  not reach the bar. The grey cat follows Pikachu's pose loosely (M4), worst when Pikachu curls up.
+- **Speed note:** on the the cluster login node (2 CPUs per user) numpy's OpenBLAS ran a 7,776 x 100 by 100 x 384 product
+  in 6.4 s with its default threads and 0.1 s with `OPENBLAS_NUM_THREADS=1`; set it for CPU work there.
+
+## Standing the grey cat square (plan, written 2026-11-17 at 01:30, before running)
+
+The user said "Yes, try it" to posing the grey cat square through a skeleton. Findings before writing this plan
+(`experiments_home2/stand`, `stand_diag*.py`):
+- **Its own skeleton cannot do it alone.** One learnt bone ("L hand") carries both front legs: 98% of the weight at the
+  -x front paw and 64% at the raised +x front paw (31% "L wrist", its parent). Its joints are not at elbows or wrists
+  either (the "L hand" joint sits at the -x front paw). Rotating its own bones would lift or lower both front paws
+  together. The hind legs do have their own bones ("R foot"/"R ankle" = -x hind, "L foot"/"L ankle" = +x hind).
+- **Why the bending tries failed, probably:** the mesh is cut along its UV seams (each seam vertex is stored twice), so
+  distances measured along the surface stop at the seams: every paw is "infinitely" far from every other, and parts of a
+  paw on another UV piece counted as far body and were held still. That matches "part of the -x front paw stays where it
+  was while its tip moves". Not rerun; the method below welds the seams first.
+
+**Method** (`cluster/home2_stand.py`, CPU):
+- Weld the seams (vertices at the same place joined) before any distance along the surface.
+- **A simple skeleton per leg**, from the leg's own shape: distance along the surface from the paw tip; the leg's top
+  is where the leg meets the body (the ring at that distance suddenly widens); its centre line; one middle joint at its
+  strongest bend (the middle if it is straight). Each leg gets two bones (upper, lower) with weights that fade over
+  1.5 cm at the joint and at the top; the body stays put.
+- **Targets** as in the second squaring try: each paw straight below its leg's top; each pair at one front-to-back place
+  and at least 5 cm apart sideways, each paw on its own side; all four at the height of the lowest paw.
+- **Two-joint reach** (upper bone turns about the top, lower about the joint, bend kept in the leg's own plane); if a
+  target is out of reach, the leg straightens toward it.
+- **Moving the squared cat:** primary form, the +x front leg also gets its own bone for motion (its leg weight taken
+  from the shared bones), so each front leg follows the part of Pikachu it corresponds to; second form, the 25 bones
+  as now. Both then redo the correspondence and bone mixes from the squared rest, as before.
+
+**Kept if** (the rule of the second squaring try, plus one): the squaring stretches no more than 2% of leg edges by over
+30%; the paw search on the squared mesh finds each paw within 2 cm of its target; floating paws (M2) fall in recorded
+and walk frames; the pose error (M4 median) grows by no more than a tenth in each (now 3.89 cm recorded, 3.32 cm
+walks); the stretch read-out says "moves cleanly"; and headless renders at the ship-rule moments (recorded video 18 at
+90 s and 40 s, walk 3 at 5 s and 15 s) show it whole, plus a low side view showing four paws down at a standing moment.
+The primary form ships if it passes; otherwise the second form if it passes; otherwise nothing changes on the page.
+
+### Standing the grey cat square: result (2026-11-17, 01:35; `experiments_home2/stand`, CPU)
+
+**Not kept; nothing changes on the page.** The squaring failed its own check in both forms (they only differ after
+it): 18.6% of leg edges stretched by over 30% (limit 2%), and the paw search on the squared mesh no longer found four
+paws.
+
+**Why: the grey cat's model has one front leg, not two.** With the seams welded, the two front paw tips are 10.2 cm
+apart along the surface and 9.4 cm in a straight line, so the surface runs straight across from one to the other.
+Seen from the front (`front_legs.png`), Pikachu's mesh has two separate front legs. The grey cat's has one column from
+chest to floor, with a bump on its side 8 cm above the floor. That bump is what the paw search called the raised +x
+front paw. Its canonical shape is the same (9.4 cm along the surface, 8.5 straight), so this comes from its Lab4D
+model, not from the pose. That is also why one learnt bone carries both front "legs". Bending the bump down to the
+floor tears the surface it grows from.
+
+The leg-top rule (ring widening to twice its width) also misfired on the hind legs. It stopped at the -x hind leg's
+hock (7.5 cm up the leg) and at the bump, so several targets were out of reach. Not pursued, since the front leg cannot
+be fixed this way.
+
+**Correction to the page:** the grey cat's note says one front paw stays up because its rest frame had it lifted. The
+true cause is the model's fused front legs. The note is corrected (version 17, text only).
+
+**Not done:** standing the grey cat on four paws needs a model of it with two front legs. A retrain on the same
+133-frame video may well fuse them again; another cat whose video shows its legs apart is likelier to work. The hind
+legs are separate and could be squared alone (-x hind paw 4.2 cm up, hind paws 10 cm apart front to back); not tried.
+
+### Standing the grey cat's hind legs square (plan, written 2026-11-17 at 02:07, before running)
+
+The user said "Yes, square them". The hind legs are separate in the mesh and have bones of their own, so they are
+bent through the grey cat's **own skeleton** (`home2_stand.py`, SQUARE=hind_own; the front leg is left as it is, and
+SPLIT=0):
+- -x hind leg: its "R ankle" bone (upper, turning about its own joint, about 15 cm above the floor) and "R foot" bone
+  (lower, turning about its joint at the hock); +x hind leg: "L ankle" and "L foot" likewise. Two-joint reach with the
+  bend kept in the leg's own plane, as before. The vertices follow by the cat's own skinning (posed from its canonical
+  mesh, so the weights blend the bend into the body as its model learnt). The target is corrected up to four times by
+  where the paw (the mean of its 20 lowest vertices) actually lands.
+- **Targets:** each hind paw straight below its leg's top (the upper bone's joint), the pair at one front-to-back
+  place and at least 5 cm apart sideways, both at the height of the lowest paw. **Fallback, used only if this fails the
+  squaring check:** keep the pair where it stands on average (mean sideways and front-to-back place), side by side at
+  least 5 cm apart, level with the lowest paw.
+
+**Kept if** (as before, for the hind legs): the squaring stretches no more than 2% of the moved legs' edges by over
+30%; the paw search on the squared mesh finds each hind paw within 2 cm of its target; floating paws (M2) fall in
+recorded and walk frames, overall and for the two hind paws; the pose error (M4 median) grows by no more than a tenth in
+each (3.89 cm recorded, 3.32 cm walks now); the stretch read-out says "moves cleanly"; and headless renders at the
+ship-rule moments (recorded video 18 at 90 s and 40 s, walk 3 at 5 s and 15 s) show it whole, plus a low side view at a
+standing moment showing both hind paws down. If kept, it replaces the grey cat's rest on the page.
+
+### Standing the hind legs square: result (2026-11-17, 02:10; `experiments_home2/stand/hind`, CPU)
+
+**Not kept; the page stays as version 17.** Both target forms failed the squaring check on stretch. The paw targets
+themselves were met.
+- **Below the leg's top:** paws landed within 0.05 cm of their targets after two corrections, and the paw search found
+  them 0.7 cm off. But 10.5% of the moved legs' edges stretched by over 30% (limit 2%). The upper bones turned 45° and
+  24°, the lower 50° and 48°.
+- **Fallback, in place:** 9.6% of edges over 30%. The -x hind paw landed 1.3 cm off (lower bone turned 85°); paw search
+  1.8 and 0.7 cm off.
+- **By eye** (`home2_stand.png`, the in-place form): the -x hind leg is dragged out sideways into a long thin shape,
+  and the two hind legs merge into one blob from the side. So the picture agrees with the check.
+- **Why, probably:** the learnt joints are not where a cat's joints are. The "R foot" joint sits 2.4 cm outside the leg,
+  beside the paw, so turning the bone about it drags the flesh rather than bending the leg. With the cat's own
+  skinning, the upper bones' weights reach well into the thigh and body. For scale: in its own video, 9.8% of all edges
+  stretch by over 30%. So the model's own skinning stretches about this much anyway, but the 2% limit was set before
+  the run and the shape is visibly wrong.
+- **Not done:** the grey cat stays as on the page: hind paws one behind the other, the -x hind paw 4 cm up, and one
+  fused front leg. A cat whose model has four separate, well-jointed legs would be the way to a square stance.

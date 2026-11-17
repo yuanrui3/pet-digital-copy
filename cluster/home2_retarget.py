@@ -222,13 +222,14 @@ def region_mix(Qa, X, i4g, w4g, P, i4p, w4p, B, top=6, k=4):
     Wp = np.zeros((len(X), B))
     for j in range(k):
         np.add.at(Wp, (n, i4p[nn[:, j]].astype(np.int64)), wv[:, j:j + 1] * w4p[nn[:, j]])
-    Wg = np.zeros((len(X), B))
+    Bg = max(B, int(i4g.max()) + 1)  # the grey cat may have more bones than Pikachu (home2_stand.py adds one)
+    Wg = np.zeros((len(X), Bg))
     np.add.at(Wg, (n, i4g.astype(np.int64)), w4g)
     share = Wg.sum(0)
     M = Wg.T @ Wp
     C = (Wg.T @ Qa) / np.maximum(share, 1e-9)[:, None]
     mix = []
-    for i in range(B):
+    for i in range(Bg):
         if share[i] < 1e-6:
             mix.append([[0, 1.0]])
             continue
@@ -241,9 +242,9 @@ def region_mix(Qa, X, i4g, w4g, P, i4p, w4p, B, top=6, k=4):
 def region_retarget(T, mix, C):
     """Pikachu's bone motion T (F,B,3,4) -> the grey cat's: each grey bone moves rigidly with the blend of Pikachu's
     bones in its mix (rotation: blended quaternions; translation: where the blend carries the bone's centre)"""
-    F, B = T.shape[:2]
+    F = T.shape[0]
     q = quat_from_mat(T[..., :3])
-    G = np.zeros((F, B, 3, 4))
+    G = np.zeros((F, len(mix), 3, 4))
     for i, mx in enumerate(mix):
         ks = np.array([a for a, _ in mx])
         ws = np.array([b for _, b in mx])
@@ -292,7 +293,7 @@ def main():
     # instead the frame of its own video whose pose is closest to Pikachu's rest (best rigid fit, on every 6th vertex)
     tree_p = cKDTree(P)
     rebase, Qc = None, Q  # Qc: the canonical rest mesh, for its own video's stretch
-    if os.environ.get("REBASE", "auto") == "auto":
+    if os.environ.get("REBASE", "auto") in ("auto", "level"):
         own = sk["own"].astype(np.float64)
         i4g, w4g = sk["skin_idx"].astype(np.int64), sk["skin_w"].astype(np.float64)
         Psub = P[::3]
@@ -311,9 +312,12 @@ def main():
                     R0 = ep_ @ np.diag(np.array(sg) * [1, 1, -1]) @ eq_.T
                 best = min(best, icp(X, Psub, s0_, R0, mp_ - s0_ * R0 @ mq_, tree_s)[3])
             scores.append(best)
-        # only frames where the fitted pose clearly stands on four separate paws (front pair ahead of the hind pair)
+        # only frames where the fitted pose clearly stands on four separate paws (front pair ahead of the hind pair);
+        # REBASE=level (feet and pose check): also square, as Pikachu's rest is: the four paws level (within 2.5 cm),
+        # each pair side by side (at least 4 cm apart sideways, at most 5 cm apart front to back); all frames tried
         e_q = edges_of(faces2)
-        cand = [f for f in np.argsort(scores)[:40]]
+        square = os.environ.get("REBASE", "auto") == "level"
+        cand = [f for f in np.argsort(scores)[:len(scores) if square else 40]]
         rebase = None
         for f in cand:  # best fit first; check four paws in Pikachu's frame after that frame's own rigid fit
             X = lbs(Q, i4g, w4g, own[f])
@@ -329,7 +333,17 @@ def main():
                 fits_.append(icp(X[::4], P[::3], s0_, R0, mp_ - s0_ * R0 @ mq_, tree_s))
             s_, R_, t_ = min(fits_, key=lambda z_: z_[3])[:3]
             tips = paw_tips(s_ * X @ R_.T + t_, e_q)
-            print("  own frame %d: fit %.1f mm, four paws %s" % (f, 1000 * scores[f], "yes" if tips else "no"), flush=True)
+            sq = ""
+            if tips is not None and square:
+                t4 = np.array(tips)  # sorted front to back: front pair, then hind pair
+                spread = t4[:, 1].max() - t4[:, 1].min()
+                apart = min(abs(t4[0, 0] - t4[1, 0]), abs(t4[2, 0] - t4[3, 0]))
+                stagger = max(abs(t4[0, 2] - t4[1, 2]), abs(t4[2, 2] - t4[3, 2]))
+                sq = ", level within %.1f cm, pairs %.1f cm apart sideways, %.1f cm front to back" % (
+                    100 * spread, 100 * apart, 100 * stagger)
+                if not (spread <= 0.025 and apart >= 0.04 and stagger <= 0.05):
+                    tips = None
+            print("  own frame %d: fit %.1f mm, four paws %s%s" % (f, 1000 * scores[f], "yes" if tips else "no", sq), flush=True)
             if tips is not None:
                 rebase = int(f)
                 break
