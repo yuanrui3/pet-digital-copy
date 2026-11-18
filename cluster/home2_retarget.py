@@ -19,7 +19,8 @@ usage: python home2_retarget.py PAGE_DIR UV_NPZ SKEL_NPZ PATHS_DIR OUT_DIR
   PAGE_DIR: the page's a2s_cat.bin/.json and a2s_walks.bin/.json (Pikachu's rest mesh, skinning, bone motion; metres)
   UV_NPZ: the grey cat's UV-mapped rest mesh; SKEL_NPZ: its skeleton, skinning and own motion (home2_skel.py)
   PATHS_DIR: paths.bin/.json (recorded root heading per frame, same order as the bone motion; the room's y points down)
-Writes OUT_DIR/a2s_cat2.bin + .json (the grey cat's rebased rest mesh in Pikachu's frame, its own skinning, and the
+Writes OUT_DIR/a2s_cat2.bin + .json (NAME and TEX change the file and texture names; the whole Body tab cat at home
+uses a2s_cat3) (the grey cat's rebased rest mesh in Pikachu's frame, its own skinning, and the
 constants the page needs), home2_retarget.json and home2_retarget.png.
 """
 import json
@@ -449,11 +450,12 @@ def main():
     json.dump(check, open(os.path.join(out, "home2_retarget.json"), "w"), indent=1)
     print(json.dumps({k: v for k, v in check.items() if not isinstance(v, dict)}, indent=1), flush=True)
 
-    meta, nbytes = pack(os.path.join(out, "a2s_cat2.bin"), [
+    name, tex = os.environ.get("NAME", "a2s_cat2"), os.environ.get("TEX", "cat2_tex_photo.jpg")  # the whole Body tab cat: a2s_cat3
+    meta, nbytes = pack(os.path.join(out, name + ".bin"), [
         ("faces", faces2.astype(np.uint32)), ("pos", Qa.astype(np.float32)), ("uv", uv2),
         ("skin_idx", i4.astype(np.uint8)), ("skin_w", w4.astype(np.float32))])
     json.dump({"blobs": meta, "bytes": nbytes, "vertices": len(Qa), "bones": B, "frames": 0,
-               "texture": "cat2_tex_photo.jpg", "units": "metres, Pikachu's (Agent-to-Sim's) own frame",
+               "texture": tex, "units": "metres, Pikachu's (Agent-to-Sim's) own frame",
                **({"mix": mix, "centre": np.round(C, 6).tolist(),
                    "from": "the grey and white cat's own rest mesh and skinning, lined up with Pikachu's; each of its "
                            "bones moves rigidly with the blend of Pikachu's bones that move the flesh its vertices "
@@ -462,8 +464,8 @@ def main():
                   {"parents": parents.tolist(), "joints": np.round(qj, 6).tolist(),
                    "align": np.round(A.reshape(B, 9), 6).tolist(),
                    "from": "bone i follows Pikachu's bone i (rotation x align), joints by forward kinematics"})},
-              open(os.path.join(out, "a2s_cat2.json"), "w"))
-    print("a2s_cat2: %d bytes" % nbytes, flush=True)
+              open(os.path.join(out, name + ".json"), "w"))
+    print("%s: %d bytes" % (name, nbytes), flush=True)
 
     # ---- picture: rest and 4 recorded + 2 walk frames, side and top; Pikachu orange, grey cat blue, skeletons drawn
     import matplotlib

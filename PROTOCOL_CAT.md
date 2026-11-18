@@ -1189,3 +1189,195 @@ Published as **version 21**:
 
 The earlier textures (`a2s_cat_tex.jpg`, `a2s_cat_tex_face.jpg`, `a2s_cat_tex_face2.jpg`) stay in the artifact,
 unused, so going back means switching the json.
+
+## The head (free exploration, 2026-11-17, 10:20 to 11:07; nothing published)
+
+The user: "I still feel the cat's head is a huge issue, free explore on that for some time".
+
+**What is wrong.** `cluster/head_diag.py` (`experiments_head/diag`) compares three heads in the home rest frame: the
+At home mesh, the same mesh bent onto the C1 cat (the surface the coat is transferred from, saved by
+`home_coat.py SAVE_BENT=1`), and the C1 cat itself. The At home head is a tall box with a flat top, thin spike ears and
+no chin. The face texture was made for the bent (C1-shaped) head, so on the box it lands off-centre with a blank cheek.
+On the bent shape the same texture gives a centred, symmetric face.
+- **The bend:** it turns the head 8° and shifts it 27-30 mm relative to the home head. Once that is removed, the shape
+  itself changes by a median 8 mm.
+- **Crinkles:** the bend is crinkled (folded small triangles). These are baked into the coat as streaks on the cheek
+  and jaw.
+
+**Tried:**
+1. **Reshape** (`cluster/head_reshape.py`, `experiments_head/r3`): the head gets the bent shape. The bent head is
+   moved back rigidly onto the home head, so it stays where the skeleton holds it. The change is smoothed 60 rounds
+   over the welded mesh and blended into the neck (full to 8 cm behind the nose, none by 12 cm).
+   - **Result:** 1,910 vertices move, median 7 mm. On the page (local copy, smooth shading, about 0.8 m), from the
+     front and at 45° the face is centred with even cheeks, and the head is rounder. From the side the change is small.
+   - **Unchanged:** the ears are still thin spikes and the top still a flat ridge; the home mesh has too few vertices
+     there to take C1's ears. No seams, and no console errors.
+   - **Page side:** a 30 KB file `data/a2s_head.*` of per-vertex offsets, loaded by a few lines in
+     `viewer/index.html` (uncommitted); `head=0` in the address keeps the old head.
+2. **Smoothing the bend before the coat transfer** (`home_coat.py BEND_SMOOTH`, `experiments_head/v8_s40`,
+   `v8_s100`): removes the crinkle streaks but blurs the coat; the nose and mouth were lost at 100 rounds. Not used.
+3. **Grafting C1's own head** (`cluster/head_graft.py`, `experiments_head/g1` to `g7`, offline only):
+   - **Method:** C1's head mesh with its own photo coat is cut off behind the ears and below the chin, moved rigidly
+     onto the home head, and skinned from the nearest home vertices. The home body is fitted to it: the replaced part
+     is tucked inside, and the neck takes the head edge's move, fading over 4 cm.
+   - **Result:** the best-looking head so far, with real ears, a round skull and the Body tab's own face; it holds up
+     in posed frames.
+   - **Problems:** a jagged seam behind the head, where the cut follows C1's triangles and the two coats meet, and a
+     few slivers under the chin. On the page it would also need a second skinned mesh with its own texture.
+
+**Where it stands:**
+- **The reshape** is ready to check against rules and publish if wanted.
+- **The graft** needs:
+  - a cleaner seam: smoothing the cut edge, and fading the head's coat into the body's at the edge;
+  - the page work for a second skinned mesh.
+
+## Finishing the graft (2026-11-17, 18:10 to 19:05; published as version 22)
+
+The user chose "Finish the graft". The work used `cluster/head_graft.py` (second round, `experiments_head/g8` to `g15`), CPU only.
+
+**Clean cut (g8 on).** Triangles crossing the cut planes are clipped at them, so the head's open edge is a smooth line
+(481 mm long, all of it on the planes). The zigzag is gone.
+
+**Neck fitted to the head:**
+1. **g8:** each neck vertex was moved to its own closest point on the Body tab cat. This crumpled the neck, with white
+   spikes at the throat.
+2. **g9:** the same, smoothed and blended outward. No spikes, but the strip behind the head stayed crinkled.
+3. **g10, g11:** one smooth stretch, solved as a whole (sparse least squares). It keeps the stretch as smooth as possible
+   while the neck near the cut sits 2 mm beneath the head.
+   - **Fit:** within 0.5 mm of that depth near the cut (median).
+   - **Crinkle:** none added (a vertex against its neighbours' mean: 1.33 mm before, 1.32 mm after, median).
+   - **Left:** a thin crease across the throat. It is in the shape, not the coat: it stayed on a plain grey render.
+   - **No better:** lower chin cuts (8.5, 9.5 and 10.5 cm below the nose; the home neck sits well inside the jowl line at
+     any height), a stiffer fit, and holding only the neck points that showed outside the head (in practice all of
+     them did).
+4. **g13:** the crease came from dragging the head's edge under the chin down onto the neck; the jowls stand up to 16 mm
+   clear of it.
+   - **Change:** the edge is left hanging there (29 of 225 edge points) and laid onto the neck everywhere else.
+   - **Result:** the crease is gone, and behind the head the edge sits on the neck with no step.
+
+**Coat (g14; g15 is the same run with the cleaned-up script, byte-identical output).**
+- The head's coat fades into the body's over the last 1.5 cm from its edge.
+- Spots the close-up video never saw (3% of the head's texels), or much darker than the fur round them (8%), are filled
+  as on the whole cat.
+- The dark patch on top of the head is mostly gone: lightness under 35 outside the face falls from 3.8% to 0.7%.
+- The far-cheek "third eye" does not show on this head.
+
+**Page.**
+- `viewer/index.html` loads `data/a2s_graft.*` (208 KB) and `a2s_graft_tex.jpg` (0.6 MB). The data file holds the
+  neck's rest-pose offsets for 2,215 vertices, and the head: 2,776 vertices with skin weights from the nearest neck
+  vertices.
+- The head is a second mesh, a child of the body mesh, so it hides with it. Each frame it is skinned on the CPU from
+  the same bones. The pale real cat in replays gets one too.
+- The neck is only changed once the head and its coat have both loaded. `head=0` in the address keeps the old head.
+  The reshape's loader (`a2s_head`) is gone.
+- **Local check:** no console errors on a walk or a replay. Old and new at four views on walks 1 and 3:
+  `head_compare.png` (sent to the user).
+- **Page note:** a new paragraph on the head. The sentence about the face sitting to one side and the far-cheek smudge
+  is removed.
+
+**Left:**
+- a small sliver at one ear base, seen from straight behind;
+- the neck behind the head looks faintly faceted in the flat-shaded offline renders (smooth on the page);
+- a faint lighter smudge on top of the head.
+
+**Published (version 22, 2026-11-17, 19:10).** The user saw the comparison and said "Publish it".
+- **Sent:** `index.html` plus `data/a2s_graft.json`, `a2s_graft.b64.0.txt` and `a2s_graft_tex.jpg`.
+- **Checked:** the artifact's file list has all three at their local sizes. The live page could not be opened here
+  (the browser pane is not signed in to claude.ai); its files are byte-identical to the local copy that was checked.
+
+## The whole Body tab cat at home: one-day test (2026-11-17, from 19:25; checks written before building)
+
+**Why.** The user felt the work was "stuck in a loop" and asked for an outside view (GPT 6.2, prompt only; the user
+pasted the prompt and the answer themselves). Its diagnosis: the home reconstruction's crude mesh has been the visible
+cat, and every fix imports pieces of the close-up (Body tab, "C1") model into it.
+- **Advice:** keep the home cat only as the motion source, show the whole C1 cat moved by that motion, and compare it
+  for one day against version 22, with a stopping rule.
+- **The user's call:** "Run the test".
+- **Method:** the grey cat's region retarget (version 15: `home2_skel.py`, `home2_retarget.py MODE=region REBASE=auto`,
+  `poseGrey`), run with C1 (`cat-pikachu-0`, `fg-skel-heldout-r120`) as the target cat.
+
+**Fixed shots (local page, same camera rules for both):**
+- walk 1 (`video=19`) at t=100 from the front;
+- walk 3 (`video=21`) at t=150 from the front, at +60° and -60°, and from behind (150°);
+- the recording `video=17` at t=900 from the front and at 60°;
+- each also with the page's own camera (no `facecam`).
+
+**Checks (all must pass for the C1 cat to win):**
+1. **Control first (diagnostic).** C1 moved by its own bones (plain skinning, as the page would do it) is compared
+   with its own exported frames (Lab4D's full warp).
+   - **Measure:** median vertex gap per frame.
+   - **If the median is over 1 cm, or it looks wrong:** the export or skinning is suspect. One identified fix is
+     allowed before going on.
+2. **Shape (hard, by eye):** in every fixed shot, and on a contact sheet of 40 frames spread over the recordings and
+   walks (plain grey, flat shading):
+   - no merged legs, legs bent backwards, torn or collapsed body parts;
+   - the head intact (round skull, ears, chin).
+3. **Coat (by eye):** no new conspicuous dark or smeared patch at the page's viewing size. The C1 coat gets the same
+   fill of unseen/dark spots as the version 22 head, and nothing else.
+4. **Paws (measured on every page frame, both cats placed as the page places them):**
+   - **Measures:**
+     - paw tips into the scan floor: the median of down paws, and the share of down paws more than 2 cm into it;
+     - sliding: the share of down-paw steps moving 1.5 cm or more in 0.1 s.
+   - **How:** on the recordings and on the walks separately. On the walks the C1 cat follows Pikachu's bones after
+     the planted-paw bending.
+   - **Pass:** no worse than version 22 by more than 0.3 cm (depth) or 1.5 points (shares) on each.
+5. **Speed:** in the browser pane, playing walk 3 for 10 s: the mean and 95th-percentile frame time no more than 20%
+   above version 22's.
+6. **Overall look:** clearly better than version 22 in at least 5 of the 7 fixed shots by my eye; then shown to the user
+   side by side. The user's judgement decides.
+
+**Stop rule.**
+- **Time:** one working day for this test.
+- **If the C1 cat wins:** at most two more working days, only on named failures from these checks. Each fix needs an
+  identified cause and must pass the whole set again.
+- **If it does not win, or the difference is unclear:** version 22 stays, and work on the home cat's looks (coat,
+  head, feet tuning) stops.
+- **Either way:** no more per-shot tweaks of offsets, fades or tolerances.
+
+**Result (2026-11-17, 21:45): the C1 cat does not win; version 22 stays, and work on the home cat's looks stops.**
+
+**Made:**
+- `home2_skel.py` on C1 (`run_home2.sbatch`, which now takes `UV` and `OUT`; 3 GPU minutes, `experiments_home3/skel`).
+  C1's warp is pure skinning: the 4-bone blend matches Lab4D's own warp to 0.0004 model units (median).
+- `home2_retarget.py NAME=a2s_cat3 TEX=a2s_cat3_tex.jpg MODE=region REBASE=auto` (`experiments_home3/retarget`):
+  - posed as its own frame 178 (four clear paws);
+  - stretch 1.05× its own video;
+  - its front legs are 0.27 m against Pikachu's 0.35 (hind 0.27 against 0.28).
+- `cluster/cat3_coat.py`: the same fill as the version 22 head (12% of its coat unseen, 7% much darker; very dark
+  fur outside the face 2.7% → 0.1%).
+- On the local page copy only: a "Pikachu, close-up body (test)" choice under Cat, moved like the grey cat
+  (`poseGrey`), following Pikachu's bones after the planted-paw bending on the copy's walks. The repo's page is
+  unchanged.
+
+**Checks:**
+1. **Control: passed.** C1 moved by its own bones against its 92 exported frames
+   (`cluster/cat3_control.py`, `experiments_home3/control`): median gap 0.37 mm (worst frame 0.83 mm, worst vertex
+   11.7 mm). It looks the same.
+2. **Shape: no hard failure, with a caveat.**
+   - **Sheet:** `cluster/cat3_sheet.py`, 40 frames, plain grey, `experiments_home3/sheet.png`.
+   - **Standing and walking:** four separate legs, nothing torn or merged.
+   - **Crouching and lying:** the shoulders and front legs crease and fold (C1 only knows the poses of its 12 s
+     clip). Version 22 creases in the same poses, along the neck join.
+3. **Coat: passed.** No new dark or smeared patch in the fixed shots. A red spot by the tail tip from behind is the room
+   scan's red bag behind the cat.
+4. **Paws: failed.** `feet_check.py` + `feet_ik.py` with the C1 cat in the grey cat's place
+   (`experiments_home3/check`, `ik`).
+   - **Sliding on the recordings:** 37.1% of down-paw steps against version 22's 42.3% (better).
+   - **Sliding on the copy's walks:** 16.8% against 9.2%. Version 22 has its own planted paws there; the C1 cat only
+     follows the bent bones. That is 7.6 points worse; 1.5 were allowed.
+   - **Floating:** its paws also hang over 3 cm up while Pikachu's are down: 21% of the time on the recordings and
+     14% on the walks, mostly the hind paws (36-41% for one).
+   - **Sinking:** cannot be worse; its lowest point is placed at Pikachu's.
+5. **Speed: not measured as written** (the browser pane was hidden, so the page drew no frames).
+   - **Measured instead:** the per-frame posing work over 150 frames: 2.9 ms against 2.1 ms (95th percentile 4.7
+     against 2.6-3.1).
+   - **Scale:** about 0.8 ms more per frame, about 5% of a 60 fps frame.
+6. **Overall look: not met.**
+   - **Fixed shots** (`head_compare`-style sheet `compare_fixed.png`): by my eye the C1 cat is somewhat better in 4 of
+     7 (a slimmer body, cleaner legs) and about the same in 3. The head is the same in both.
+   - **The page's own camera** (overhead, across the room, `compare_own.png`): the two can hardly be told apart.
+
+**By the rule written before the test:** check 4 fails and check 6 is not met, so version 22 stays.
+- **What stops:** work on the home cat's looks (coat, head, feet tuning).
+- **For the record:** the one clear gain of the whole C1 cat, its legs and body shape, shows mainly in close views. Its
+  paws would need their own planted-paw solver, a separate project.

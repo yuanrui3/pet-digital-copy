@@ -14,6 +14,8 @@ a coat baked from its model's colour network (no fur detail). Both are the same 
   - FILL=1 (fifth try, in place of HEAD_ONLY): the whole cat wears the photo coat; texels unseen by C1, far from its
     surface, or much darker than the fur within 5 cm (outside the front of the face) take a smooth fill from the reliable
     fur around them instead of the old coat ("The real fur on the whole cat at home")
+  - BEND_SMOOTH=N: the bend's change smoothed over the mesh N rounds before the transfer (its crinkles otherwise
+    bake folded streaks into the coat); SAVE_BENT=1 saves the bent mesh (bent.npz), BENT_ONLY=1 stops there
   - DIAG_W=1: also writes weights.jpg (R close to the C1 surface, G seen by C1's video, B head weight) and renders it
   - first try (v1): blended toward the home cat's current coat where no C1 frame saw that spot (C1's photo_cover),
     after a colour match; it turned those spots blue-white with hard edges, and the chosen C1 frame had its head turned
@@ -36,6 +38,7 @@ import sys
 import numpy as np
 from PIL import Image
 from scipy.ndimage import distance_transform_edt, map_coordinates, uniform_filter
+from scipy.sparse import coo_matrix, diags
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -343,8 +346,23 @@ def main():
     keep = Fw[:, 0] != Fw[:, 1]
     keep &= (Fw[:, 1] != Fw[:, 2]) & (Fw[:, 0] != Fw[:, 2])
     Xb_w = nonrigid(Pw, Fw[keep], Xc[firstc], Fcw, cKDTree(Xc[firstc]), [30.0, 10.0, 3.0])
+    if int(os.environ.get("BEND_SMOOTH", "0")) > 0:  # "The head": the bend's crinkles smoothed out of the change
+        n_it, ew = int(os.environ["BEND_SMOOTH"]), edges_of(Fw[keep])
+        Adj = coo_matrix((np.ones(2 * len(ew)), (np.r_[ew[:, 0], ew[:, 1]], np.r_[ew[:, 1], ew[:, 0]])), shape=(len(Pw),) * 2).tocsr()
+        Mavg = diags(1 / np.maximum(np.asarray(Adj.sum(1)).ravel(), 1)) @ Adj
+        Dw = Xb_w - Pw
+        for _ in range(n_it):
+            Dw = 0.5 * Dw + 0.5 * (Mavg @ Dw)
+        moved = np.linalg.norm(Pw + Dw - Xb_w, axis=1)
+        print("bend smoothed (%d rounds): moved median %.1f mm, p99 %.1f mm" % (n_it, 1000 * np.median(moved), 1000 * np.percentile(moved, 99)), flush=True)
+        Xb_w = Pw + Dw
     Pb = Xb_w[wid]
     print("home mesh: %d vertices welded to %d; bent onto C1" % (len(P), len(Pw)), flush=True)
+    if os.environ.get("SAVE_BENT") == "1":  # "The head": the home mesh bent onto C1, and C1 fitted, in the home rest frame
+        np.savez(os.path.join(out, "bent.npz"), P=P, Pb=Pb, Xc=Xc, Fc=Fc, UVc=UVc, nose=nose)
+        print("saved bent.npz", flush=True)
+        if os.environ.get("BENT_ONLY") == "1":
+            return
 
     # ---- every home texel -> closest C1 point -> photo coat
     tpos, trc = rasterise(Pb, F, UV, SIZE)

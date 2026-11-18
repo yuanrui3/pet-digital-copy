@@ -17,6 +17,7 @@ export PATH=$D/env-lab4d/bin:$PATH PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
 unset PYTHONHOME PYTHONPATH
 export TORCH_HOME=$D/cache/torch MPLCONFIGDIR=$D/cache/mpl
 cd $D/code/lab4d || exit 2
-UV_NPZ=$D/experiments_cat2/$SEQ-$LOG/uv.npz python $D/tools/home2_skel.py --flagfile=logdir/$SEQ-$LOG/opts.log \
-  --load_suffix latest --cat_out $D/experiments_home2/skel || { echo "skeleton export failed"; exit 3; }
+# UV and OUT may be set by the caller (the whole Body tab cat at home: its c1_uv.npz, experiments_home3/skel)
+UV_NPZ=${UV:-$D/experiments_cat2/$SEQ-$LOG/uv.npz} python $D/tools/home2_skel.py --flagfile=logdir/$SEQ-$LOG/opts.log \
+  --load_suffix latest --cat_out ${OUT:-$D/experiments_home2/skel} || { echo "skeleton export failed"; exit 3; }
 echo "DONE home2 $(date)"

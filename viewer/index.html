@@ -160,7 +160,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
 
   <div class="notes">
     <div class="note"><h2>Body</h2><p id="note-body">A 3D reconstruction (Lab4D) of a twelve-second video of the cat. For a test, the model never saw the colours of the shaded stretch of the timeline. "As trained, frame by frame" shows how its idea of the lighting drifted there; "Steady coat" uses one well-lit moment for the whole clip.</p><p>"Photo coat" is not the model's own colouring: it paints the video's pixels onto the model's surface, using the model's camera and pose for each of the 76 frames. Each spot takes its colour from the frames that saw it most head-on and agree with each other; spots the camera never saw well, such as the belly, keep the model's colours.</p></div>
-    <div class="note"><h2>At home</h2><p>The room is the owner's phone scan. The lines are where the cat actually went in 19 home videos over a month (19 minutes in all). The cat here is Agent-to-Sim's reconstruction of Pikachu from that whole month, and it moves its body exactly as it did on camera: eating, sitting by the litter box, curling up on the sofa. The small orange phone marks the person filming.</p><p>Its coat comes from the Body tab's photo coat. The month of home video was filmed mostly from across the room, so the reconstruction's own coat was a smooth pale blur with no eyes, nose or mouth. The whole cat now wears the coat from the twelve-second close-up video, fitted onto this cat's body. About a quarter of it is a smooth blend of the fur around it: where that video never saw the fur clearly (the belly, the backs of the hind legs, behind the ears), and where the two cats' different shapes made a dark mark (behind the cheek, on the back thigh). The face sits a little to one side of the head, and a smudge on the far cheek that looked like a third eye is smoothed over the same way.</p><p>Each frame the cat is lowered or raised onto the scan's floor when it is within 8 cm of it (left alone further up, as on the sofa). Placed as recorded, its paws were mostly inside the floor: by 2 cm on the recordings and 4 cm on the copy's walks (median), and by over 7 cm a tenth of the time; now by under 0.1 cm (median), and within about 2 cm eight times in ten. In the recordings its paws still slide at times: a paw that is down moves 1.5 cm or more in 0.1 s on 42% of the steps, because the estimated motion glides the body along on nearly straight legs.</p><p>On the copy's own walks Pikachu's paws are planted: a paw that comes down stays where it landed, each leg bending at its own joints (and lengthening by up to 5%, about as much as the model's legs vary anyway) to keep it there, and when it can reach no further it takes a short step, two paws at most in the air at once. Slow skating (1.5 to 3 cm in 0.1 s) fell from 16% to 4% of steps, and the paws that slide 1.5 cm or more from 34% to 9%. It missed one part of the bar set before the try: the skin stretches a little more than allowed (edges stretched by over 30%: 1.1 points more, against a limit of 1). It is shown anyway, because the steps look far more natural than gliding. The recordings are left as estimated, and the grey and white cat is left as it was.</p></div>
+    <div class="note"><h2>At home</h2><p>The room is the owner's phone scan. The lines are where the cat actually went in 19 home videos over a month (19 minutes in all). The cat here is Agent-to-Sim's reconstruction of Pikachu from that whole month, and it moves its body exactly as it did on camera: eating, sitting by the litter box, curling up on the sofa. The small orange phone marks the person filming.</p><p>Its coat comes from the Body tab's photo coat. The month of home video was filmed mostly from across the room, so the reconstruction's own coat was a smooth pale blur with no eyes, nose or mouth. The whole cat now wears the coat from the twelve-second close-up video, fitted onto this cat's body. About a quarter of it is a smooth blend of the fur around it: where that video never saw the fur clearly (the belly, the backs of the hind legs, behind the ears), and where the two cats' different shapes made a dark mark (behind the cheek, on the back thigh).</p><p>Its head is the Body tab cat's own head, with that cat's own photo coat, set on this body and turned by this cat's head bones. The reconstruction's own head was a tall box with thin spiky ears, and the face, made for a rounder head, sat to one side of it. The new head is cut off behind the ears and under the chin. The neck is stretched smoothly to meet it, and the head's fur blends into the body's over the last 1.5 cm. Under the chin its cheeks stand out past the neck, as a real cat's do. Spots on the head that the close-up video never saw clearly, such as the top of the head, are smoothed over from the fur around them.</p><p>Each frame the cat is lowered or raised onto the scan's floor when it is within 8 cm of it (left alone further up, as on the sofa). Placed as recorded, its paws were mostly inside the floor: by 2 cm on the recordings and 4 cm on the copy's walks (median), and by over 7 cm a tenth of the time; now by under 0.1 cm (median), and within about 2 cm eight times in ten. In the recordings its paws still slide at times: a paw that is down moves 1.5 cm or more in 0.1 s on 42% of the steps, because the estimated motion glides the body along on nearly straight legs.</p><p>On the copy's own walks Pikachu's paws are planted: a paw that comes down stays where it landed, each leg bending at its own joints (and lengthening by up to 5%, about as much as the model's legs vary anyway) to keep it there, and when it can reach no further it takes a short step, two paws at most in the air at once. Slow skating (1.5 to 3 cm in 0.1 s) fell from 16% to 4% of steps, and the paws that slide 1.5 cm or more from 34% to 9%. It missed one part of the bar set before the try: the skin stretches a little more than allowed (edges stretched by over 30%: 1.1 points more, against a limit of 1). It is shown anyway, because the steps look far more natural than gliding. The recordings are left as estimated, and the grey and white cat is left as it was.</p></div>
     <div class="note"><h2>The copy on its own</h2><p>In these walks nothing is replayed: a behaviour model (Agent-to-Sim's, trained here on 17 of the 19 videos) picks where the cat goes next, 5.6 s at a time, and how its body moves, for about a minute. Each walk starts from a real moment in one of the two videos it never trained on. Asked to predict those two videos 5.6 s ahead, it placed the route about twice as close as replaying the cat's most similar recorded moments (0.16 m off against 0.35 m), but its guesses of where the cat ends up bunched together and were barely better (0.78 m against 0.79 m).</p><p>So these walks use a changed goal choice, with no retraining: every 5.6 s, a quarter of the time the copy heads for one of the spots where the real cat often ended up (within 3 m of where it is), otherwise for a place of its own choosing. A quarter was picked so that the walks move as much as the real cat does in the videos it trained on: 0.56 m per 5.6 s on average, against the real cat's 0.54 m (heading for a spot half the time made them move 0.86 m; never, 0.23 m). Scored on the two unseen videos, the best of its 16 guesses landed 0.57 m from where the cat really went, against 0.78 m before and 0.76 m for guessing the cat's usual spots alone, and it also did better on a score that does not reward scattered guesses. The walks under "Where you put the person" and "Calling the cat" keep the old goal choice, since their results were measured with it.</p></div>
     <div class="note"><h2>Where you put the person</h2><p>Press "Place the person" and click near one of the 12 rings, the places where people really stood while filming. The copy then walks for 34 s with the person standing there; where the person is, is the only thing it reacts to. Under "The copy beside the real cat", the copy and the real cat (pale) start together in the two videos it never trained on, with the person moving as they really did.</p><p>It does react: moving the person to the opposite side of the cat changes where the copy heads by about 0.57 m, against 0.02 m between two random draws, and removing the person changes it by 0.46 m. But it does not simply head for the person: after the move it shifts toward the person's new side only 59% of the time, and it ends up nearer the person 41% of the time, about as often as the real cat did (38%). The person filming usually follows the cat, so the model may have learned where the person goes rather than how the cat responds.</p></div>
     <div class="note"><h2>Calling the cat</h2><p>Press "Call the cat" and click one of the 12 blue spots, places where the real cat often was (on the floor or up on furniture). The copy is given that spot as its goal and gets there by its own route and gait, then carries on by itself.</p><p>What else it reacts to: switching off its view of the room shifts where it heads by about 0.12 m, against 0.02 m between two random draws; yet its goals land where the real cat has been almost as often without the room (87%) as with it (90%). A person walking matters far more: compared with the same person walking away, the copy's goal moves about a metre, and in 4 of 5 moments an approaching person pushes it away. That may be the filming habit again: the person walked toward the cat mostly when it was leaving, and the model cannot tell the two apart.</p></div>
@@ -557,6 +557,30 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     let a2s = null;
     try {
       const A = await load("a2s_cat");
+      // the head: the Body tab cat's own head (its mesh and photo coat) on this body, moved by the head's bones; the
+      // neck is fitted to its edge and the old head tucked inside (rest pose offsets). head=0 in the address keeps the old head
+      let G = null, headTex = null;
+      if (new URLSearchParams(location.search).get("head") !== "0") {
+        try {
+          G = await load("a2s_graft");
+          headTex = await new Promise((ok, bad) => new THREE.TextureLoader().load("data/" + G.meta.texture, ok, undefined, bad));
+          headTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          const bi = G.v.body_idx.data, bo = G.v.body_off.data, rp = A.v.pos.data;
+          for (let k = 0; k < bi.length; k++) for (let j = 0; j < 3; j++) rp[3 * bi[k] + j] += bo[3 * k + j];
+        } catch (e) { G = null; }
+      }
+      const addHead = (body, extra) => {  // the head as a child of a body mesh (shown and hidden with it)
+        if (!G) return;
+        const hg = new THREE.BufferGeometry();
+        hg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(G.v.pos.data), 3));
+        hg.setAttribute("uv", new THREE.BufferAttribute(G.v.uv.data, 2));
+        hg.setIndex(new THREE.BufferAttribute(G.v.faces.data, 1));
+        hg.computeVertexNormals();
+        const h = new THREE.Mesh(hg, new THREE.MeshLambertMaterial(Object.assign({ map: headTex }, extra || {})));
+        h.frustumCulled = false;
+        body.add(h);
+        body.userData.head = h;
+      };
       const g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(A.v.pos.data), 3));
       g.setAttribute("color", new THREE.BufferAttribute(A.v.col.data, 3, true));
@@ -574,6 +598,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
       const catMat = (extra) => new THREE.MeshLambertMaterial(Object.assign(catTex ? { map: catTex } : { vertexColors: true }, extra || {}));
       const mesh = new THREE.Mesh(g, catMat());
       catHolder.add(mesh);
+      addHead(mesh);
       homeCat.visible = false;
       const gg = new THREE.BufferGeometry();
       gg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(A.v.pos.data), 3));
@@ -581,13 +606,15 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
       if (g.attributes.uv) gg.setAttribute("uv", g.attributes.uv);
       gg.setIndex(g.index);
       const ghost = new THREE.Mesh(gg, catMat({ transparent: true, opacity: 0.38, depthWrite: false }));
+      addHead(ghost, { transparent: true, opacity: 0.38, depthWrite: false });
       const ghostHolder = new THREE.Group();
       ghostHolder.matrixAutoUpdate = false;
       ghostHolder.add(ghost);
       ghostHolder.visible = false;
       world.add(ghostHolder);
       a2s = { mesh, ghost, ghostHolder, rest: A.v.pos.data, idx: A.v.skin_idx.data, w: A.v.skin_w.data, bones: A.v.bones.data,
-              B: A.meta.bones, V: A.meta.vertices, bf: new Float32Array(A.meta.bones * 12), walks: null };
+              B: A.meta.bones, V: A.meta.vertices, bf: new Float32Array(A.meta.bones * 12), walks: null,
+              head: G && { rest: G.v.pos.data, idx: G.v.skin_idx.data, w: G.v.skin_w.data, V: G.meta.vertices } };
       try { const W = await load("a2s_walks"); a2s.walks = W.v.bones.data; a2s.walkFrames = W.meta.frames_per_run; } catch (e) {}
       // the floor fix: per frame, how far to lower (or raise) the cat so it stands on the room scan's floor
       try { const FL = await load("feet_floor"); a2s.dyRec = FL.v.rec_dy.data; a2s.dyWalk = FL.v.walk_dy.data; } catch (e) {}
@@ -750,6 +777,8 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     for (let k = 0; k < n; k++) bf[k] = half(src[base + k]);
     if (pre) pre(bf);
     skinMesh(bf, a.rest, a.idx, a.w, a.V, mesh);
+    const h = mesh.userData.head;  // the grafted head follows the same bones
+    if (h && a.head) skinMesh(bf, a.head.rest, a.head.idx, a.head.w, a.head.V, h);
   }
   // planted paws: bend each leg (top joint, middle joint, wrist or hock, paw) so its paw moves by this frame's
   // correction. The top joint stays, the middle joint bends the way the leg already bends, the wrist goes to its place
