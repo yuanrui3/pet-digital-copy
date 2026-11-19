@@ -1367,7 +1367,9 @@ cat, and every fix imports pieces of the close-up (Body tab, "C1") model into it
      follows the bent bones. That is 7.6 points worse; 1.5 were allowed.
    - **Floating:** its paws also hang over 3 cm up while Pikachu's are down: 21% of the time on the recordings and
      14% on the walks, mostly the hind paws (36-41% for one).
-   - **Sinking:** cannot be worse; its lowest point is placed at Pikachu's.
+   - **Sinking: not measured** (corrected after the outside review). Matching lowest points (every third vertex,
+     body only) makes the two deepest points equal, not the paws. When Pikachu's deepest point is its belly or tail,
+     the C1 cat's lowest paw is put at that depth. Per-paw depth into the scan floor was never computed.
 5. **Speed: not measured as written** (the browser pane was hidden, so the page drew no frames).
    - **Measured instead:** the per-frame posing work over 150 frames: 2.9 ms against 2.1 ms (95th percentile 4.7
      against 2.6-3.1).
@@ -1381,3 +1383,790 @@ cat, and every fix imports pieces of the close-up (Body tab, "C1") model into it
 - **What stops:** work on the home cat's looks (coat, head, feet tuning).
 - **For the record:** the one clear gain of the whole C1 cat, its legs and body shape, shows mainly in close views. Its
   paws would need their own planted-paw solver, a separate project.
+
+**Outside review of the test (2026-11-17, 22:30).** GPT 6.2 read the pets-only repository (`yuanrui3/pet-digital-copy`,
+commit 298f4b2). It upholds the decision (version 22 stays) but narrows the conclusion. I checked each claim below in
+the code.
+- **Sliding not paired:** each cat's sliding share counts only its own down-paw steps (`feet_check.py`, M1). The
+  recordings' 37.1% against 42.3% is therefore not a paired comparison, and a floating paw simply drops out of the C1
+  cat's count.
+- **Floating paws not shown to come from the body:** `REBASE=auto` asks for four clear paws but not level ones (that
+  is `REBASE=level`). The placement is a single vertical shift, which keeps whatever height differences the posed cat
+  already has. A tilted reference pose or the region mix are as likely causes as its legs.
+- **Sinking:** the claim that it could not be worse was wrong (corrected above).
+- **Speed:** unverified.
+- **The narrowed conclusion:** the tested whole-C1 pipeline did not give enough visible benefit to justify replacing
+  version 22 and building it its own planted-paw solver. Its best attainable quality, with a level reference pose and
+  its own contact solver, is unknown.
+- **Confirmed in the code, not fixed:**
+  - the home animation is stepped at the motion's 10 samples per second, with no blending between samples
+    (`viewer/index.html`, the playback loop);
+  - the first 0.8 s of each walk (its recorded past) uses the walk's first predicted heading. The rollout export
+    (`b1_rollout.py`) saves no past headings, and `viewer/index.html:676` substitutes `rot[0]`;
+  - rare cases in the leg solver (a turn between exactly opposite directions, a perfectly straight leg) fall back
+    to no turn. It is not known whether any real frame hits them.
+- **Its suggestion:** one bounded day on smooth playback between samples, with gates written first.
+
+## Smooth playback and the walk-start facing (2026-11-17, from 23:00; checks written before building)
+
+The user: "Yes, both", that is, the outside review's one-day smooth-playback test, and the walk-start facing fix.
+
+### A. The walk-start facing
+
+**Found first** (`cluster/walks_past_rot.py`):
+- **The past is in the recordings:** each walk's 8 recorded past frames match a stretch of the recordings to 0.7 mm
+  (the worst of 132 walks).
+- **The substituted heading is far off:** it differs from the recorded one by a median 32° (90th percentile 146°).
+- **Same convention:** the transposed version agrees worse.
+- **A jump at the hand-over:** the behaviour model's first predicted heading is often far from the real cat's at that
+  moment, as above. Recorded headings in the lead-in alone would therefore swap a wrong facing for a sudden turn
+  there.
+
+**Change:**
+- the 8 past frames take their recorded headings (`past_rot` in `walks.json`);
+- over the first 10 predicted frames (1 s) the heading eases from the last recorded one to the predicted one (a
+  rotation that shrinks smoothly to none, applied in front of the prediction; `lead_rot`);
+- positions and body motion are unchanged;
+- the walks' floor fix and planted-paw data are recomputed with the new headings, by the same scripts.
+
+**Checks (all must pass):**
+- **A1:** in the past frames the page's heading equals the recorded one (within 0.1°).
+- **A2:** in the first 2 s after the hand-over, no frame turns more than the 99th percentile of the generated walks'
+  own per-frame turning elsewhere.
+- **A3:** with the recomputed data, the walks' sliding (down-paw steps moving 1.5 cm or more in 0.1 s) and floor
+  gap are no worse than before: by at most 0.5 points overall, and by at most 2 points within the first 2 s of the
+  walks.
+
+### B. Smooth playback
+
+**Change:**
+- between two of the motion's samples (10 a second), every shown posed mesh (body, grafted head, the pale real cat,
+  the grey cat) is blended from its two posed samples, positions and normals;
+- the cat's place and turn: positions blended, turn by quaternion;
+- the person marker and the skeleton lines are blended too;
+- no blending across a track change, a jump of the time slider, a pause or the end of a track;
+- `smooth=0` in the address keeps today's stepping.
+
+**Fixed clips** (8 s each, chosen now):
+1. walk 1 from t=9 s;
+2. walk 3 from t=14 s;
+3. the recording "video 18" from t=88 s;
+4. the recording "video 5" from t=16 s (crouching and lying);
+5. the free walk with the largest turning over 8 s (chosen by data, not by eye);
+6. "Video 18 · try 1" from 0 s (the replay with the pale real cat; it includes the recorded start);
+7. walk 5 from 0 s (a recorded start and its hand-over).
+
+**Checks (all must pass):**
+- **B1, exact samples:** at every sample time the shown meshes equal today's (within 0.1 mm).
+- **B2, in-between frames:** halfway between samples, no vertex is more than 2 mm from the average of its two sampled
+  places in the room (no swing of a planted paw, no sinking beyond the samples), over the 7 clips. The head and body
+  blend with the same weights, so the seam stays within what the samples show.
+- **B3, look:** blind A/B in the browser pane, the user choosing per clip without knowing which is which. The smooth
+  version must be preferred in at least 5 of the 7 clips; ties do not count.
+- **B4, speed:** in the visible pane, the mean and 95th-percentile frame time with blending no more than 20% above
+  stepping, on clip 2.
+
+**Stop rule:** one working day. If a check fails or the benefit is unclear, the playback change is reverted. The facing
+fix is judged on its own checks. No new tuning of gait, mesh or paws.
+
+### Results so far (2026-11-18, 00:40)
+
+**A. The facing fix fails A2, and is not used.**
+- **A1:** passes in substance. The headings are copied exactly (4 decimals). The 0.6° first measured comes from the
+  arccosine formula near zero, applied to rounded matrices; the recorded headings are exact rotations.
+- **A2 fails:** with the 1 s ease, the worst turn in one frame in the first 2 s after the hand-over is 22°. The walks'
+  own 99th percentile later on is 16°. 3.8% of those early frames go over it, against a worst of 14° without the fix.
+- **`walks.json`** is unchanged. `walks_past_rot.py` stays as the record. A longer ease would be a new attempt.
+
+**Found while testing B: the generated walks turn suddenly every 5.6 s.**
+- **Size:** 240 of the walks' 52,444 steps (0.46%) turn more than 45° in 0.1 s, up to 176°. The recordings have 2.
+- **Where:** at frames 64, 120, 176, 232, ..., where the behaviour model's 5.6 s pieces meet. At these steps the cat
+  really jumps in the room (walk 1, frame 119 to 120: points move up to 54 cm, 27 cm on average). The walk-start jump
+  in A is the first of them.
+- **Not fixed:** this is a fault of the rollout, not the page.
+
+**B. Smooth playback: the first blending was wrong; the second passes B1 and B2.**
+- **First version:** it turned the cat's frame and blended the pose inside it. At such a jump the halfway cat strayed
+  252 mm from the straight blend. It was replaced before any viewing.
+- **The kept version** blends the final positions in the room, as the review advised; a paw that stays put stays put.
+- **Added after seeing the data, so not part of the checks written first:** a step where the cat's frame turns more
+  than 45° in 0.1 s is treated as a cut and stays a step. Blending it would squash the cat through itself.
+- **Over the 7 clips (557 blended steps, 4 cut steps):**
+  - **B1:** at every sample the shown meshes and the cat's frame equal today's exactly (0 mm).
+  - **B2:** halfway, every vertex is within 0.0001 mm of the average of its two places (float error).
+  - **The largest blended move:** 441 mm in one step, in the replay clip.
+- **Still to come:** B3 (the user's blind A/B) and B4 (speed in the visible pane).
+
+**B3, the user's blind A/B (2026-11-18): fails.**
+- **Picks:** the smooth version won 2 of the 7 clips (3 and 5), stepping won 1 (clip 7), and 4 were "no difference";
+  5 were needed.
+- **The user, afterwards:** "I feel right now the animation is still so bad that rating has no point."
+- **B4:** not measured; it cannot change the outcome.
+
+**Decision by the stop rule:** the playback change is reverted. `viewer/index.html` is back to version 22, and the
+diff is kept outside the repository.
+
+**Neither change is used; version 22 stays as published. What the two tests showed:**
+- **The playback is not where the poor animation comes from;** the motion is. The home motion was estimated from
+  videos filmed across the room. On the recordings, paws slide 1.5 cm or more in 0.1 s on 42% of down-paw steps,
+  and the legs stay nearly straight while down ("Feet and pose check").
+- **The generated walks add snaps:** the behaviour model's 5.6 s pieces join with turns of up to 176° in 0.1 s
+  (above).
+- **What it would take:** better animation needs a better motion source, not more work on the page or the meshes.
+
+## Stopped (2026-11-18)
+
+The user: "Stop here". Version 22 is the finished page. Work on the cat's looks and animation ends here, unless the user
+starts a new project for a better motion source (public animal motion data, newer animal-motion models, or
+re-estimating the home videos). That would start with research and a stop rule before any building.
+
+## Restart, Phase 0: diagnostics for a better motion source (2026-11-18; tests and rules written before running)
+
+The user asked for a roadmap ("deep analyze our roadmap to address these issues"). The report is
+`reports/Cat animation improvement roadmap.md`, with its notes in `research_notes/`. Its phases are:
+- Phase 0: CPU diagnostics;
+- Phase 1: a seam repair inside the rollout, and a body-dip contact layer;
+- Phase 2: dog-motion walking legs;
+- later: retraining or physics, which need GPU time beyond the allowance.
+
+The user: "Start Phase 0". The stop of 2026-11-18 is lifted for Phase 0 only. Phase 1 starts only on the user's word, with
+its gates written first.
+
+**Phase 0 decides three questions, plus the thresholds for judging. Nothing on the page changes.**
+
+**P0-1, seams** (CPU, on the existing `walks.json`):
+- **Measure:** at each of the walks' 5.6 s seams (and at the hand-over from the recorded past):
+  - the turn in that step;
+  - the cat's speed over the 0.5 s before;
+  - the angle between its facing and the direction the new path takes over the next 1 s.
+  Do the same for steps elsewhere in the walks and in the recordings, as baselines.
+- **Read-out:** if seam snaps happen mostly when the cat was slow and the new path leaves at a large angle to its
+  facing, the path stage starts paths blind to the facing (the roadmap's hypothesis).
+
+**P0-2, does the body stage use the past facing** (GPU, a few minutes on one GPU, within the exploration allowance):
+- **Measure:** for 20 seeded windows from the held-out videos, generate the body motion three ways:
+  - as normally;
+  - with the 8 past headings turned 90° about the vertical (positions unchanged);
+  - with the past dropped.
+  Then compare the first generated heading.
+- **Read-out:**
+  - If turning the past by 90° moves the first heading by under 20° (median), the model ignores the past facing. Only
+    sampling choices, inpainting or retraining can fix the seams.
+  - If it moves by over 60°, it uses it, and the seams come from the path stage.
+
+**P0-3, reach** (CPU, recordings and walks as the page poses them, before the planted-paw bending):
+- **Measure:** for every frame where a paw is down and held where it came down, how far the hip (or shoulder) must
+  drop so that the leg chain reaches the held paw at 95% of its length.
+- **Go-ahead for the body-dip layer:** the drop needed is at most 10% of leg length on 95% of such frames, and changes
+  by at most 1 cm per 0.1 s on 95% of them, so the body need not bob.
+
+**P0-4, rig bend** (CPU renders):
+- **Test:** each of Pikachu's four leg chains is bent at its middle joint by 36° (and 45°) beyond its rest bend,
+  through its own bones, in the rest pose and in 4 recorded poses.
+- **Measure:** the share of the leg's mesh edges stretched by over 30%, and the narrowest leg girth against rest.
+- **Pass:** no hooks or folds by eye, at most 10% of leg edges over 30% stretch, and girth at least 80% of rest.
+- **If it fails:** the learnt rig blocks any fix that bends legs. Re-rigging the legs would come first, as a separate
+  project.
+
+**P0-5, error ladder** (the user's eye, local page):
+- **Clips:** short clips of the page's own walks with known defects added, in a random order:
+  - paw slides of 0, 4, 8, 16 and 32 mm per 0.1 s on planted paws;
+  - single heading snaps of 0, 10, 20, 45 and 90°.
+- **The user marks** each clip "looks fine" or "looks wrong".
+- **Result:** the smallest defect marked wrong by the user sets the threshold for Phase 1's automatic guards.
+
+**P0-6, measuring tool:** extend `feet_check.py` so that it:
+- measures the motion as shown (the 10 Hz samples as the page steps them);
+- pairs two candidates on the same frames;
+- adds:
+  - slide per stance as a share of leg length;
+  - the highest planted paw speed;
+  - leg extension while down;
+  - turns at seams against elsewhere;
+  - facing against travel direction near seams.
+
+**Stop rule for Phase 0:** three working days. Its results are reported to the user with the Phase 1 gates written
+out, and nothing is built for Phase 1 without the user's word.
+
+**P0-1 result: seams** (`cluster/p0_seams.py`, on the page's `walks.json` and recordings).
+- **Seam steps (788):**
+  - 30.2% turn more than 45° in 0.1 s (median 21.6°, 99th percentile 175°).
+  - Other walk steps: none over 45°, 99th percentile 6.8°.
+  - Recordings: none over 45°, 99th percentile 10.6°.
+- **Not the cat's speed before the seam:** the share over 45° is 26% at under 0.05 m/s, 37% at 0.05-0.15, 29% at
+  0.15-0.3, and 37% above.
+- **The new path's direction:** where the next window's path leaves within 45° of the facing, 12% of seams snap.
+  - at 45-90°: 48%;
+  - at 90-135°: 79%;
+  - at 135-180°: 82%.
+- **Facing against the path ahead:** at seams, a median 39° before the step and 16° after. Elsewhere it is about 16°
+  throughout.
+- **Read-out:** a new window's path often leaves at a large angle to the facing, and the body turns to the new path at
+  once. That supports the roadmap's hypothesis, except that it does not depend on the cat being slow.
+- **Not explained by the path:** two thirds of seams (525) have a path that barely moves (under 5 cm in 1 s), and they
+  still turn a median 17°. That points at the body stage not holding the past facing, which P0-2 tests.
+
+**P0-3 result: reach. Fails its go-ahead rule** (`cluster/p0_reach.py`, `experiments_p0/reach.json`; version 18's held
+paws, the needed drop of the girdle, as a share of the chain's length: front 0.21 m, hind 0.17 m).
+
+| Group | Frames | Within 10% of leg (95% needed) | Drop p50 / p95 | Smooth: change ≤ 1 cm per 0.1 s (95% needed) |
+|---|---|---|---|---|
+| recordings, shoulders | 5,681 | 83.1% | 1.0 / 2.5 cm | 66.8% |
+| recordings, hips | 9,654 | 90.9% | 0.8 / 1.9 cm | 87.2% |
+| walks, shoulders | 34,464 | 80.0% | 1.4 / 2.5 cm | 75.9% |
+| walks, hips | 49,994 | 88.5% | 1.0 / 1.9 cm | 88.4% |
+
+- **The drops are small:** about 1 cm typically and 2.5 cm at most, out of reach in under 0.4% of frames.
+- **But they change fast:** a quarter to a third of frame-to-frame changes at the shoulders exceed 1 cm per 0.1 s.
+- **Consequence:** a pure dip would make the body bob. A smoothed dip with the remainder taken by a little leg
+  lengthening (the classic foot-skate cleanup) is a Phase 1 design choice for the user. The rule as written is not met.
+
+**P0-4 result: rig bend. Fails** (`cluster/p0_bend.py`, `experiments_p0/bend`).
+- **Numbers:** at 36° the median leg has 7.6% of its edges stretched or squeezed by over 30%, but the worst has 11.4%
+  (a hind leg in a recorded pose; one front leg 10.8%). Limit 10%. The narrowest girth is a median 92% of unbent, the
+  worst 79.5%; limit 80%. At 45°: 15.4% and 72%.
+- **By eye** (`bend_legs_rest.png`, `bend_side.png`): at 36° the front legs tear open at the armpit and elbow (jagged
+  stretched skin between leg and chest), and the torso creases. The hind legs bend smoothly.
+- **Consequence, by the rule written first:** the learnt rig blocks any fix that bends the legs.
+  - **Why it matters:** a body dip to 95% leg extension needs about 36° of bend at the middle joint (roadmap
+    arithmetic), so both the body-dip layer and dog-motion legs depend on it.
+  - **What comes first:** re-rigging the legs, as a separate project.
+
+**P0-2 result: past facing.** `cluster/p0_past.py`, `run_p0_past.sbatch`: one A10, 7.6 min (about 0.13 GPU-hours;
+the exploration total is now about 7.7 of 10). `experiments_p0/past`. 20 held-out windows × 3 seeds.
+- **Turning the past facing by 90°** moves the first generated heading by a median 27.6°: the model follows about a
+  fifth of the turn.
+- **Dropping the past** moves it by 21.7°.
+- **At the hand-over** the first heading jumps a median 23° from the last real one.
+- **The new path wins:** the first heading sits a median 7.9° from the new path's direction, against 29.2° for the last
+  real heading.
+- **Read-out:** by the rule written first, "in between" (20-60°), close to "ignores". The facing at the start of a
+  window is set mostly by the new path; the past facing only nudges it.
+- **For the seam repair this means:** it has to act on the path (paths that continue the facing: best-of-N,
+  inpainting of the overlap) more than on the body stage's past.
+
+**P0-5 result: the error ladder** (the user, blind, in random order; 2 clips per level).
+
+| Defect | 0 | small | | | large |
+|---|---|---|---|---|---|
+| Planted paw slide, mm per 0.1 s (0 / 4 / 8 / 16 / 32) | fine, fine | 4: wrong, fine | 8: wrong, wrong | 16: wrong, wrong | 32: wrong, wrong |
+| Sudden turn of the whole walk, degrees (0 / 10 / 20 / 45 / 90) | fine, fine | 10: fine, fine | 20: fine, fine | 45: fine, fine | 90: fine, fine |
+
+- **The turn clips did work:** in a replay the shown heading jumps the full 90° at the turn frame.
+- **Thresholds for the automatic checks:**
+  - paw sliding is seen from 4 to 8 mm per 0.1 s. The project's 1.5 cm line is about twice what the user notices.
+  - sudden turns of up to 90° are not seen as wrong, in these clips.
+- **What this says about the seams:** the snaps where the windows meet are not what makes the animation look bad to the
+  user; the sliding is.
+
+**P0-6 result: the measuring tool** (`cluster/p0_measure.py`). It measures the page as shown, at the user's thresholds,
+optionally for two candidates paired on the same steps. First use: version 22 as shown, and the recordings with version
+18's planted paws switched on (`REC_TOO=1`; the corrections already exist in `feet_ik.bin`, but the page uses them on the
+walks only).
+
+| Share of down-paw steps sliding more than | 4 mm | 8 mm | 15 mm | Median slide | Leg extension while down (p50) |
+|---|---|---|---|---|---|
+| Recordings as shown (version 22) | 82% | 60% | 42% | 11 mm | 99.3% |
+| Walks as shown (version 22, planted paws) | 14% | 12% | 9.2% | 0.04 mm | 99.9% |
+| Recordings with planted paws switched on | 22% | 20% | 17% | 0.05 mm | 99.7% |
+
+### Phase 0 summary (2026-11-18)
+
+**What the user sees:** sliding paws (from 4 to 8 mm per 0.1 s). On the page they are mostly in the 19 recordings, where
+60% of planted steps slide visibly. The walks are much better at 12%. Sudden turns, even of 90°, were not seen as
+wrong.
+
+**Phase 1 options, re-ranked by these results** (none started; each needs the user's word and has its gates here):
+1. **Planted paws on the recordings too.** The existing solver; its corrections are already in the page's data, so it is
+   a one-line change to the page.
+   - **Visible sliding on the recordings:** 60% → 20%.
+   - **Trade-offs:** the legs stay straight (stretched up to 5%), and the recordings stop being "as estimated". The user
+     chose walks-only in version 18.
+   - **Gates:** paired measure at 8 mm on the recordings at most 25%; stretch within version 18's allowance; blind
+     forced choice on recordings, at least 15 of 20 pairs for the change.
+2. **Re-rigging the legs.** A separate project, and the prerequisite for any fix that bends legs (body dip, dog-motion
+   legs), since P0-4 failed. Days to weeks; the risk is high.
+3. **Seam repair in the rollout.** Ranked down: the user did not see the turns as wrong. P0-2 shows that any repair would
+   have to act on the path.
+4. **Stop at version 22.**
+
+## Phase 1: planted paws on the recordings (2026-11-18; clips and rules fixed before building)
+
+The user: "Paws on recordings". This is version 18's planted-paw solver, switched on for the 19 recordings as well as
+the copy's walks.
+- **Data:** its corrections for the recordings were computed back then (`experiments_feet/ik2/feet_ik.bin`, blob
+  `rec`). The page's file holds the walks only (byte-identical to the cluster's `walk` blob), so the page file gets the
+  `rec` blob added.
+- **Coverage:** corrections are non-zero on 11,424 of the 11,574 recording frames.
+
+**Gates** (from the Phase 0 summary):
+1. **Paired measure:** at 8 mm per 0.1 s on the recordings, at most 25%. Measured beforehand at 20%; note this gate was
+   set after that number was known, so it is not independent.
+2. **Stretch:** within version 18's allowance (5%). True by construction: the same solver and data.
+3. **The decider, the user's blind forced choice:** 20 pairs, the same 5 s clip with and without, sides random. The change
+   passes at 15 or more of 20.
+
+**Clips** (chosen by data with seed 1: 5 s windows where corrections are on in at least half the frames, at most 2 per
+recording), as (recording index from 0, start frame):
+
+(1, 490), (2, 380), (2, 440), (3, 10), (3, 110), (5, 310), (6, 190), (7, 260), (8, 30), (9, 10), (10, 270), (13, 840),
+(14, 130), (15, 30), (15, 270), (16, 310), (17, 150), (17, 790), (18, 40), (18, 910).
+
+**If it fails:** the page stays at version 22 and the added data is not published.
+
+**Phase 1 outcome so far (2026-11-18): the blind test was not done; nothing published.**
+- **Built, local copy only:** the page change (`recpaws`, about a dozen lines, inert without the data) and the page file
+  with the recordings' corrections (`rec` blob). The page's solver matches the cluster's on 6 test frames, 3 of them
+  recordings (worst difference 0.00008). No console errors.
+- **The user, on opening the 20-pair test:** "sorry I am not doing this, can hardly tell, think of an unsupervised to
+  way to tackle this".
+- **By the gates:** the decider did not pass, so the page stays at version 22 and the added data is not published.
+- **What this shows about the measure:** by `p0_measure.py`, the recordings' sliding at 8 mm falls from 60% to 20% of
+  down-paw steps with the change, yet the user can hardly tell the pairs apart. So this sliding measure does not track
+  what the user sees on the recordings.
+  - **A likely reason:** "down" is decided by a paw's height alone, so paws that are really stepping count as
+    planted.
+- **Next:** a judge that needs no ratings from the user, with real cat video as the reference, to be designed and
+  proposed before anything is built.
+
+## Proposed: a judge that needs no ratings (2026-11-18; not started, waits for the user's word)
+
+**Why.** The user will not rate pairs they can hardly tell apart, and today the sliding measure promised a large gain
+that the user could not see. The judge therefore needs a reference for what real cat motion looks like, not thresholds
+set by hand, and it must be checked against what the user has already said.
+
+**Reference, already on the cluster (no download).** Lab4D's public cat-85 set, `data/cat85`:
+- 77 clips of real cats (12,082 raw frames; 4,141 kept frames, whose names are their raw frame numbers, so times are
+  known);
+- 29 of the clips are this same cat (3,979 raw frames);
+- for every kept frame the archive holds the cat's outline (mask), the image motion to the next frames (flow), depth,
+  and an estimated camera direction relative to the cat.
+- **Not usable for this:** the user's curated clips are sounds, grooming and resting, with no walking.
+
+**Method.**
+1. **Our cat in the same form.** Outline sequences of the animated cat are rendered from the real clips' own camera
+   directions, at the same time spacing. This is exact and needs no estimator.
+2. **Named gait numbers,** measured identically on real and ours:
+   - body lengths travelled per leg cycle (from the outline's leg band and the ground's image motion);
+   - leg swing amplitude;
+   - bend of the leg outline;
+   - body bob.
+   Where ours falls outside the real cats' range, that is a named defect.
+3. **A blind test by machine:** a small classifier is trained to tell real outline-motion clips from ours and scored
+   on held-out clips (50% means it cannot tell them apart). Its errors and attributions show when in the cycle, and
+   where on the body, ours gives itself away.
+
+**Trust checks (all must pass before the judge decides anything):**
+- **T1, real against real:** two halves of the real clips, split by clip: at most 60%.
+- **T2, same motion, model against video:** the two clips for which both the video and our own reconstruction exist
+  (`cat-pikachu-0`; `cat-85-0068`, the grey cat): the reconstruction's outlines must score clearly closer to real than
+  the page's walks and recordings do. This separates "the motion is wrong" from "it is a 3D model".
+- **T3, agreement with the user's known judgements:**
+  - walks with added paw slides of 16 and 32 mm score worse than without;
+  - version 18's planted walks score better than the un-planted ones;
+  - planted paws on the recordings change the score only a little.
+- **If a check fails:** the judge is not used, and that is reported.
+
+**Use.** Each candidate fix is scored against real cats on the same clips (paired, with a bootstrap noise band). The
+user is shown one before/after only when the judge reports a large change.
+
+**Limits.**
+- about 7 minutes of real footage;
+- outlines alone miss some paw sliding, so the ground's image motion is used with them;
+- the judge names defects but does not fix them, and the front legs still cannot bend (P0-4).
+
+**Effort and stop rule.** CPU, no download, about 2 working days. If the trust checks fail, the work stops and the page
+stays at version 22.
+
+## Building the judge (2026-11-18; the user: "Build it"; details fixed before any result)
+
+**What is measured, the same way on real clips and on ours.** A "pair" is two consecutive frames. Everything is taken from
+the cat's outline pixels and their image motion, in units of the cat's size (the square root of its outline area), as
+ratios to how far the body travelled in that pair. Ratios do not depend on the clips' frame rates, which are unknown.
+- **Travel:** the body's mean image motion minus the ground's (the background just under the feet).
+- **Paw slip ratio:** in the lowest strip of the outline (bottom 8% of its height), the slowest tenth of the motion
+  relative to the ground, divided by the travel. A cat with a planted paw gives about 0; a gliding cat about 1.
+- **Leg motion ratio:** the mean motion of the lower 40% of the outline relative to the body, divided by the travel.
+- **Torso motion ratio:** the same for the upper half.
+- **Stride:** the leg motion's cycle (autocorrelation of the fore and hind halves' motion along the travel) times the
+  travel, in sizes per cycle; and the swing amplitude.
+- **Windows:** about 12 pairs; kept only if the cat is whole in the frame, longer than tall (ratio at least 1.3),
+  travelling within 30° of the image's horizontal, at 0.3 sizes per second or more (30 frames per second assumed for
+  this threshold only).
+
+**Ours.** The page's cat (version 22's shape) is drawn as points and their exact image motion.
+- **Camera:** a still, level camera beside the path, 55° to 125° from the travel direction and 5° to 30° above it,
+  drawn at random with a fixed seed.
+- **Pair spacing:** chosen so the travel per pair matches the real clips' typical travel per pair.
+- **Blur:** real video motion is estimated and blurred at fine scale, so ours is blurred by 3% of the cat's size. This
+  is set from the estimator's resolution and not tuned; 0% and 6% are reported beside it.
+
+**Changes from the proposal, made now:**
+- **Cameras:** side views are selected from the image itself and ours are drawn from a fixed range. The set's camera
+  estimates are coarse.
+- **Check T2:** it compares the leg and torso measures, real video against our own reconstruction of the same clip, on
+  the two clips that have both. The slip ratio cannot be checked that way, because the reconstructions have no ground.
+  Its check is physical: real walking cats always have a planted paw, so whatever the real clips measure above 0 is
+  the instrument's floor.
+
+**Blind test by machine.** Logistic regression (and a small forest, for comparison) on the window measures, motion
+ratios only, no shape measures. Folds are grouped by clip, and the score is the held-out balanced accuracy.
+
+**Window measures and the checks' numbers, fixed before any result (2026-11-18).**
+- **Window measures** (12 pairs; sums over the window, divided by the summed travel):
+  - slip ratio (10th and 25th percentile versions);
+  - leg motion ratio;
+  - torso motion ratio;
+  - the fore and hind leg parts' swing (standard deviation of their motion along the travel, over the mean travel);
+  - their mean;
+  - the correlation between fore and hind.
+- **Score of a candidate:** the classifier (trained on real windows against version 22 as shown) gives each of its
+  windows a probability of being real. Candidates measured on the same windows and cameras are compared by the mean
+  paired difference, with a 90% interval from resampling tracks.
+- **T1 passes** if real against real (clips split at random into two halves, 20 splits) averages at most 60% balanced
+  accuracy.
+- **T3 passes if all three hold:**
+  - (a) walks with 16 and 32 mm of added slide both score lower than the walks as shown, the interval excluding 0;
+  - (b) the walks as shown (planted) score higher than the walks un-planted, the interval excluding 0;
+  - (c) planting the paws on the recordings changes the score by less than half of what planting changes on the walks
+    in (b), or by less than 0.05.
+
+**Real clips measured; the window definition loosened before any comparison with ours (2026-11-18).**
+- **Measured:** `cluster/judge_real.py` (`experiments_judge/real_pairs.npz`): 2,680 of 4,064 pairs, with the ground
+  found under the feet in all of them.
+- **Too few windows as first defined:** 12 pairs and at least 1.3 times longer than tall gives 40 windows from 19 clips.
+  The limit is runs of 12 measurable pairs in a row: only 98 exist with no other filter.
+- **Change, made on these counts alone:** windows of 8 pairs, a step of 4, and at least 1.15 times longer than tall. That
+  gives 93 windows from 28 clips. The other limits stay (travel within 30° of horizontal, 0.01 sizes per raw frame).
+- **First look at real cats** (the 40 strict windows, medians):
+  - slip ratio 0.12 (quartiles 0.08 to 0.29): the slowest part of the paw strip moves at about a tenth of the body's
+    speed. This is the instrument's floor for a truly planted paw;
+  - leg motion ratio 0.59;
+  - torso motion ratio 0.45;
+  - travel per pair 0.08 sizes.
+- **Ours** is drawn with `TARGET=0.08` (travel per pair) and 8 pairs per window.
+
+**Check T2, made exact before running (2026-11-18).**
+- **Clips:** the two that have both a video and our own reconstruction of it: `cat-pikachu-0` (the Body tab cat) and
+  `cat-85-0068` (the grey cat).
+- **Reconstruction side:** the reconstruction's posed frames (body frame, articulation only) are drawn from the video's
+  estimated view direction. They are measured like ours, with the body's travel taken from the video (the
+  reconstruction has no ground): the ground's motion is set so that the outline's travel equals the video's over the
+  same raw frames. A paw that the reconstruction keeps planted then measures a slip near 0.
+- **Windows:** common spans of 24 raw frames, a step of 12, where every video pair in the span was measured and the cat
+  travels at 0.01 sizes per raw frame or more.
+- **T2 passes if, on both clips:**
+  - (i) the reconstruction's median leg motion ratio is within a factor of 1.5 of the video's, and its median slip
+    ratio is within 0.15 of the video's;
+  - (ii) the classifier (trained without that clip) gives the reconstruction's windows a mean probability of being real
+    that is nearer to the same clip's video windows than to version 22's.
+
+**Check T2, first version: not established (2026-11-18).** `cluster/judge_recon.py`.
+- **Too few windows:** the grey cat's clip gave no common window and the Body tab cat's clip gave 3. Its video is a
+  close-up, and the outline touches the frame's edge in most pairs.
+- **In those 3 windows:** the leg and swing measures follow the video closely (correlations 0.97 to 1.0, at about two
+  thirds of the size), but the slip ratio does not (0.46 against the video's 0.05).
+- **A flaw in the check:** the reconstruction was drawn in its body frame from the set's coarse view estimate, with
+  the travel borrowed from the video. That is not the image the model actually reproduces.
+
+**Check T2, corrected (rule unchanged; written before running).**
+- **Reconstruction side:** each reconstruction is posed at every kept frame of its own video in the model's own
+  optimised camera, with that frame's intrinsics (`cluster/judge_cam_export.py`, a few GPU minutes inside
+  `run_judge.sbatch`), and drawn into the video's own pixels.
+- **Pairs:** the video's own (kept frame to next kept frame).
+- **Ground:** the video's measured ground motion for that pair.
+- **Frame edge:** the outline is cut at the frame's edge on both sides alike, so pairs where the cat touches the edge
+  count.
+- **Windows:** 8 pairs, a step of 4, where both sides are measured and the cat travels at 0.01 sizes per raw frame or
+  more.
+- **Pass rule:** (i) and (ii) as written above.
+
+**Where the drawing runs:** the login node was too slow for drawing ours (125 windows in 25 minutes), so the six
+versions, four blur variants and the two camera exports run as one job on a compute node (`run_judge.sbatch`, one A10,
+12 cores).
+
+## The judge's results (2026-11-18): a sound ruler, but not a stand-in for the user
+
+**Runs.**
+- **Job:** `run_judge.sbatch`, job 12420621: one A10 for 7 min 45 s, about 0.13 GPU-hours (the exploration total is now
+  about 7.85 of 10).
+- **Ours:** `judge_ours.py`: six versions and four blur variants, 220 windows each on the same windows and cameras.
+- **Scoring:** `judge_score.py` (`experiments_judge/score.json`).
+- **Real:** 93 windows from 28 clips.
+- **Speeds match:** real 0.023 sizes per raw frame, ours 0.026.
+
+**The gait numbers (medians; real quartiles in brackets).**
+
+| Measure | Real cats | Version 22 as shown | Walks, planted (shown) | Walks, un-planted | Recordings (shown) | Recordings, planted |
+|---|---|---|---|---|---|---|
+| Slip ratio (slowest paw's speed over the body's) | 0.16 (0.09 to 0.36) | 0.44 | 0.36 | 0.56 | 0.54 | 0.42 |
+| Leg motion ratio | 0.60 (0.49 to 0.78) | 0.28 | 0.34 | 0.15 | 0.21 | 0.33 |
+| Torso motion ratio | 0.53 (0.31 to 0.79) | 0.25 | 0.26 | 0.16 | 0.22 | 0.29 |
+| Fore-leg swing | 0.26 | 0.13 | 0.18 | 0.05 | 0.08 | 0.16 |
+| Probability of being real (classifier) | 0.85 (held out) | 0.11 | 0.15 | 0.02 | 0.05 | 0.14 |
+
+**The blind test by machine:** real against version 22: balanced accuracy 93%, AUC 0.97 (recordings 94%, walks 91%). It
+calls 94% of real windows real and 7% of ours real.
+
+**Trust checks.**
+- **T1 passes:** real against real 47% on average over 20 splits (highest 63%); 60% was the limit.
+- **T2, corrected: passes on one clip, fails on the other.**
+  - **Reconstruction outlines:** drawn in the models' own cameras, they match the videos' in size (0.98 and 0.95).
+  - **Body tab cat's clip (9 windows): passes.** Slip 0.10 against the video's 0.08; leg ratio 0.92 of the video's;
+    correlations across windows 0.87 to 0.99 on every measure; probability of being real 0.48 against the video's 0.62
+    and version 22's 0.11.
+  - **Grey cat's clip (7 windows): fails the slip part.** Slip 0.67 against the video's 0.41, a difference of 0.26 where
+    0.15 was allowed. The leg ratio is 1.09 and the score part passes (0.58, video 0.85). This reconstruction is the
+    known weaker one (one fused front leg, outline overlap 0.88), so the difference may be the model's own sliding
+    and not the instrument, but the rule asked for both clips.
+- **T3: (a) and (b) pass, (c) fails.**
+  - **(a) passes:** added slide of 16 mm lowers the score by 0.059 [0.017, 0.111], and of 32 mm by 0.128 [0.085, 0.182].
+  - **(b) passes:** planted walks score 0.140 higher than un-planted [0.095, 0.192]. With no blur it is 0.159, and with
+    6% blur 0.131.
+  - **(c) fails:** planted paws on the recordings raise the score by 0.105 [0.076, 0.130]. That is three quarters of the
+    walks' gain, where under half (0.070) or under 0.05 was required. The user could hardly tell those pairs apart.
+
+**Verdict by the rules written first:** the judge is not used to decide for the user. Check (c) and one clip of T2 failed.
+
+**What the results still show** (from an instrument that passed T1, T2 on the well-reconstructed clip, and (a) and (b)):
+- **Every version is far from real cats, and in the same ways.** Their legs move about half as much per distance
+  travelled (0.28 against 0.60). The slowest paw moves at 0.44 of the body's speed against 0.16. The torso is about half
+  as lively.
+- **Planted paws help by this ruler, on walks and recordings alike, but only a little on its scale:** from 0.02-0.05 to
+  0.14-0.15, where real cats score 0.85.
+- **Why the user can hardly tell (consistent with their own words):** the versions being compared all sit at the
+  "clearly not real" end.
+- **To look different to a person,** a change would have to move these numbers most of the way to real: legs that move
+  twice as much and a livelier body. Phase 0 showed the present rig cannot bend the front legs for that.
+
+**Stop rule applied:** the trust checks did not all pass, so this work stops and the page stays at version 22. The
+recordings' planted paws are not published.
+
+## Stopped again (2026-11-18)
+
+The user: "Stop at version 22". Version 22 is the finished page.
+- **Not published, and taken out of the page file:** planted paws on the recordings. The page change is kept as
+  `recpaws_page.patch` in the sessions' shared notes folder; the recordings' corrections are the `rec` blob of
+  `experiments_feet/ik2/feet_ik.bin` on the cluster.
+- **Kept for a later leg rebuild, should the user ever start one:** the ruler (`cluster/judge_*.py`,
+  `run_judge.sbatch`, `experiments_judge/` on the cluster) and the Phase 0 tests (`cluster/p0_*.py`). The ruler says how
+  far a version is from real cats; it is not to be used in place of the user's judgement (check (c) failed).
+- **What a visible improvement would need:** legs that move about twice as much per distance and a livelier body. That
+  means re-rigged legs with new walking motion, a project of weeks with real risk.
+
+## Better data: screening the close-up clips (2026-11-18; no rebuild started)
+
+The user asked "should we look for better data", then "Screen the clips". The idea: the ruler showed that the Body tab
+cat, rebuilt from a close-up clip, moves like its video, while everything from the distant home videos does not. The
+cat-85 set on the cluster has more close-ups that an earlier note here called "Pikachu itself" (folders 0055 to 0084).
+
+**That note was wrong, and so was what I first told the user** ("29 clips of this same cat, about 38 s of clean side-view
+walking in 20 of them"). Looked at properly (`cluster/clip_screen.py`, picture sheets `experiments_judge/screen/`):
+- **Other cats:** 0068 is the grey cat (our own second cat) and 0069 is a white long-haired cat.
+- **Not walking:** the ruler's "side-view walking" count included a cat rolling on a carpet seen from above (0078 to
+  0080, 18 of the ruler's 93 real windows).
+  - **Effect on the ruler:** without those clips the real cats' medians are slip 0.12, leg 0.60 and torso 0.45, and
+    the machine blind test is 94% (AUC 0.97). The ruler's conclusions do not change.
+
+**Which clips are this cat** (`cluster/clip_identity.py`, `run_clip_identity.sbatch`; two jobs, 5.5 GPU minutes).
+- **The cat test's identity check, as it was, does not carry across clips.** With the Body tab clip as the only
+  template it accepts only clips that look like that clip (0055, and partly 0062 to 0064). It rejects clips filmed in
+  the same home that are plainly the same cat.
+- **Clip-to-clip score instead:** each frame's three nearest frames among the known clips of this cat, minus the same
+  among known other cats; the median over the clip's frames.
+  - **Known this cat** (0055 to 0065 and the Body tab clip, same home, left out one at a time): all 12 above 0
+    (+0.04 to +0.36).
+  - **Known other cats** (50 clips): median -0.06, 5 above 0, highest +0.039.
+- **Unknown clips:**
+
+| Clip | Score | Reading |
+|---|---|---|
+| 0081, 0070 | +0.10, +0.04 | this cat (the same table as the known clips) |
+| 0066, 0071, 0073 | +0.05, +0.05, +0.04 | likely this cat (above every other-cat clip) |
+| 0072, 0083, 0077, 0078 | +0.01, +0.03, +0.01, 0.00 | unclear (0072 is the same scene as 0071 and 0073) |
+| 0074, 0075 | -0.06, -0.05 | scored like other cats; a grey-tan cat in the same room as 0071 to 0073 |
+| 0067, 0079, 0080, 0082, 0084 | -0.02 to -0.05 | scored like other cats, or unclear |
+
+- **By eye:** the cat of 0071 to 0073 is ginger, and the Body tab cat is pale gold. But in 0061 and 0056, filmed in the
+  known home, this cat also looks ginger in warm light, so colour alone does not rule 0071 to 0073 out.
+
+**Side-view walking on the floor, whole cat in frame** (by eye; seconds from the ruler's windows):
+
+| Clip | Length | Side walking | Walks towards | Cat size | This cat? |
+|---|---|---|---|---|---|
+| 0071 | 3.2 s | 2.9 s | left | 326 px | likely |
+| 0072 | 4.8 s | 4.1 s | right | 315 px | unclear (same scene) |
+| 0073 | 4.2 s | 2.9 s | left | 557 px | likely |
+| 0066 | 3.0 s | 1.3 s | left | 511 px | likely |
+| 0074 | 10.5 s | 7.1 s | right | 482 px | scored as another cat |
+| 0075 | 6.5 s | 6.1 s | left | 369 px | scored as another cat |
+| 0055 | 4.0 s | 0.4 s (walks, then turns to the camera) | right | 630 px | yes |
+| 0060 | 2.7 s | 1.1 s (on a table) | left | 516 px | yes |
+
+- **Total for this cat:** about 10 to 12 s of clean side walking that is confirmed or likely this cat, in both
+  directions. The two best walking clips (0074 and 0075, 13 s more) may be another cat.
+- **Other views of this cat:** the remaining known clips (0056 to 0065) are front views, on a table, or sitting.
+  They are useful for shape, less so for gait.
+
+**What a rebuild would cost** (Lab4D's own recipe for several clips of one cat; the archive already holds every
+preprocessed input, so there is no download):
+- **Per round:** about 165 s on one A10, whatever the number of clips (the Body tab cat: 120 rounds, about 5.5
+  GPU-hours; the grey cat: 60 rounds, 2.7).
+- **For about 10 clips:** 120 to 240 rounds, so 5.5 to 11 GPU-hours, plus a 4-round trial (0.2) and exports (0.3).
+- **Budget:** about 7.95 of the 10 exploration hours are used, so a rebuild needs the user's approval.
+- **After it,** the walking pieces must still be joined to follow the home paths, and checked with the ruler.
+
+## The rebuild from this cat's close-up clips (2026-11-18; plan and pass rules written before any run)
+
+The user saw the screening and chose "Approve the rebuild" (offered at about 6 to 12 GPU-hours). This GPU time is
+approved separately from the 10 exploration hours (about 7.95 used). **Hard cap: 12 GPU-hours** for the trial,
+training, exports and checks together. If anything would exceed it, stop and ask.
+
+**Clips (18): only those certain or likely to be this cat.**
+- **The Body tab clip:** `cat-pikachu-0-0000`.
+- **Certain, same home:** `cat-85-0055` to `0065`, `0070`, `0081`.
+- **Likely:** `0066`, `0071`, `0072`, `0073` (0072 is the same scene as 0071 and 0073).
+- **Left out:** 0074 and 0075 (scored as another cat), the unclear clips, and all other cats.
+
+**Training:** Lab4D's recipe for several clips of one cat, with the settings that built the Body tab cat (`fg-skel`,
+`--fg_motion skel-quad`, 256 px crops, one A10); every clip is treated as the same cat.
+- **Trial first:** 4 rounds, to time a round and to see that the 18 clips load.
+- **Full run:** 160 rounds if a round takes 200 s or less (about 7.3 hours at 165 s); if slower, 120 rounds. If even 120
+  rounds would pass 9 hours, stop and ask.
+
+**Pass rules for the rebuilt cat** (all needed before any work on walks):
+- **R1, outline:** drawn in the model's own cameras, its outline overlaps each clip's (intersection over union). The
+  median is at least 0.85 on each of the walking clips 0071, 0072, 0073 and 0066, and on the Body tab clip (the
+  single-clip Body tab cat reached 0.945, the grey cat 0.88).
+- **R2, legs by eye:** four separate legs, nothing fused or torn, on a sheet of frames from the walking clips, drawn
+  plain grey.
+- **R3, the ruler on its own videos:** on the walking clips together, the reconstruction's median leg motion ratio is
+  within a factor of 1.5 of the video's and its median slip ratio within 0.15 of the video's (check T2's rule (i)).
+- **R4, the ruler's score:** the classifier's mean probability of being real, for the reconstructed walking clips, is at
+  least 0.40 (the Body tab cat's reconstruction scored 0.48; version 22 scores 0.11).
+
+**If any of R1 to R4 fails:** the rebuild is not used, the page stays at version 22, and the result is reported.
+**If all pass:** the next step is proposed to the user before it starts: joining the walking pieces so the cat follows
+the home paths.
+
+**Found while setting up (2026-11-18), before any run: the walking clips are thin in time.**
+- **Frames kept by the set's own preprocessing:** it keeps only frames with enough image motion. For the walking clips
+  that leaves 14 (0071), 15 (0072) and 23 (0073) frames, about 3 to 6 a second; 0066 has 62. The 18 clips have 943 kept
+  frames in all.
+- **Precedent:** the Body tab clip was as sparse (76 of 366 raw frames, about 6 a second) and its rebuilt motion measured
+  close to its video.
+- **Decision:** the rebuild goes ahead as approved.
+- **The remedy, if the result is promising but too coarse:** re-run Lab4D's preprocessing on those clips' raw frames
+  (they are in the archive). That needs its tools installed first, which means downloads to approve.
+
+**Trial (2026-11-18, 03:00): passed.** Job 12422642, 4 rounds on one A10: the 18 clips load, and a round takes 132 to
+143 s. The whole job took 13 minutes (0.22 GPU-hours).
+- **Full run, as planned:** 160 rounds, expected about 6.1 hours (`run_pika18.sbatch 160`, limit 8 hours).
+- **Export test:** the export and checks (`run_pika18_export.sbatch`) are first run on the 4-round trial model, to find
+  mistakes in them before the full model is ready. Its numbers mean nothing.
+- **Expected GPU total:** about 6.7 hours of the 12 allowed.
+
+**Running (2026-11-18, from 03:15):** the full training, job 12422934 (160 rounds; rounds so far 134 to 142 s).
+- **Export test on the trial model:** job 12422935, 6.6 minutes; the export and all four checks ran end to end.
+  - **Its numbers are a 4-round model's and mean nothing** (outline overlap about 0.6, legs barely moving).
+  - **A useful by-product:** the walking clips' own videos score well on the ruler (probability of being real 0.59 to
+    0.94, slip 0.09 to 0.13).
+  - **Windows available for R3 and R4:** 16 in the four walking clips (0066: 9, 0071: 2, 0072: 2, 0073: 3).
+- **Queued:** the same export and checks for the full model, to start when the training ends
+  (`run_pika18_export.sbatch 160`). Outputs go to `experiments_pika18/fg-skel-r160/`.
+- **GPU so far on the rebuild:** 0.33 hours.
+
+**Result (2026-11-18, 09:24): failed R1, R2 and R4. The rebuild is not used; the page stays at version 22.**
+Training job 12422934 ran 160 rounds in 6 h 03 min; export and checks job 12423059 took 8 minutes. GPU used on the
+rebuild in all: about 6.5 hours of the 12 allowed (trial 0.22, export test 0.11, training 6.05, export 0.14).
+- **R1, outline: FAIL, narrowly.** Medians: 0071 0.863, 0072 **0.847**, 0073 0.875, 0066 0.874, the Body tab clip
+  **0.824** (needed 0.85 on each). The other 13 clips: 0.850 to 0.888.
+- **R2, legs by eye: FAIL.** On the walking clips' sheets the cat has a cat's outline from the camera, with short stub
+  legs that often read as two, not four. On the Body tab clip the same model's cat is crumpled into a folded shape
+  (0.26 across the picture in a side-view frame, against 0.42 on 0073), though its outline from the camera still
+  overlaps 0.82. *(Corrected the same day: this first said the body was "a flat slab, a cardboard cut-out" seen from
+  other directions. Measured, it is not; see the correction below.)*
+- **R3, the ruler on its own videos: pass, narrowly.** Walking clips pooled (16 windows): leg motion 0.74 of the
+  video's (allowed 0.67 to 1.5); slip +0.140 over the video's (allowed 0.15).
+- **R4, the ruler's score: FAIL.** Mean probability of being real for the reconstructed walking clips 0.16 (needed
+  0.40); their own videos 0.68; version 22 0.10. Per clip: 0066 0.19, 0071 0.13, 0072 0.03, 0073 0.18; the Body tab
+  clip 0.14 (its single-clip model scored 0.48 on the same clip).
+- **Root cause (first written; withdrawn, see the correction below):** "the clips are nearly all side views from
+  about the same height, so nothing pins the cat's width; the model fits the outlines with a flat body and stiff stub
+  legs". Both halves were wrong.
+- **What the checks do show:** stub legs, slip and leg motion near version 22's, and joint training made the Body tab
+  clip worse than its own single-clip model. The thin frame counts (14 to 23 kept frames on the walking clips) may add
+  to it, but the Body tab clip had 76 and still collapsed, so denser frames alone are not shown to be the fix.
+- **Stop rule honoured:** no repair runs. Not tried: re-processing the raw frames at full rate (needs tool installs
+  and downloads to approve); training the walking clips without the Body tab clip.
+- **The user chose "Stop here" (2026-11-18).** The full-frame-rate re-processing is not done. No cluster jobs are left
+  running; the page stays at version 22.
+
+**Correction (2026-11-18, measured after the result was reported): the rebuilt cat is not flat, and the clips are not
+all side views.** Found while preparing the theory report (`research_notes/Cat animation bottleneck theory/
+coordinator_measurements_and_corrections.md` has the tables).
+- **Width, measured:** the rebuild's rest mesh is 0.096 wide, like the Body tab cat (0.098) and the grey cat (0.104);
+  mid-body width/height 0.48 against 0.54, 0.56 and the home cat's 0.39. Posed frames keep it: thinnest/longest ratio
+  0.23 to 0.32 on all 17 cat-85 clips (rest 0.24). The "cardboard cut-out" came from my reading orthographic renders
+  of a long cat with its tail held out; seen from above or end-on a real cat is narrow too.
+- **The Body tab clip is folded, measured:** posed ratio 0.46 with the longest spread 0.0715 against 0.095 to 0.13 on
+  every other clip.
+- **View angles** (clip screening, each clip's preprocessing camera in the cat's frame): across the 17 cat-85 clips
+  the median azimuth spans most of the circle and the elevation 9 to 35 degrees. Only within each walking clip is the
+  view nearly fixed (p10 to p90: 0071 11, 0072 16, 0073 10 degrees).
+- **The failure stands** (R1 narrow, R2 stub legs and the folded Body tab clip, R4 0.16); its cause is not known.
+
+## A built-in walking cycle on the copy's walks (2026-11-18; checks and stop rule written before building)
+
+The user asked for a deep dive into the theory behind the bottlenecks (`reports/Cat animation bottleneck theory.md`),
+then asked what the next step should be. Recommended: one bounded try at replacing the legs on the copy's walks with a
+built-in cat walking cycle, built from published cat gait numbers, keeping the behaviour model's paths and body. The
+user said "Try it". If it is not clearly better to the user in one before/after, version 22 is final.
+
+**Why:** the report found that the binding limit is the source leg motion (legs move about half as much as a real
+cat's, stay about 99% straight while a paw is down), which no fix layered on top of it can supply. Every route to
+better legs substitutes an assumption; the built-in cycle is the only one that needs no new data, no generative model,
+no uncertain licence and no GPU.
+
+**Facts read off the page's data first** (`cluster/gait_probe.py`, all 132 copy runs, 52,576 frames):
+- **Legs** (top to middle to wrist or hock, then to the paw): front about 0.10 + 0.11 m, then 0.06 m; hind about
+  0.10 + 0.075 m, then 0.04 m. Extension while walking: median 99.0 to 99.8% of full length.
+- **Bend direction is not settled in the model:** the middle joint lies towards the tail in 29 to 62% of frames,
+  depending on the leg, so the cycle sets it: elbows towards the tail, knees towards the head.
+- **The paws sit about 0.10 m behind** their shoulder or hip in the cat's frame (the body is pitched about 12 degrees
+  nose up), and the cycle keeps that stance.
+- **Speed** (shoulders and hips over the room): median 0.068 m/s; 38% of frames below 0.05 m/s; 90th percentile
+  0.38 m/s.
+- **Standing:** shoulders and hips stay above 85% of their usual height in 97% of frames (no lying down); all four
+  paws are within 2 cm of the lowest point in only 19% of frames (dangling paws).
+
+**The cycle** (`cluster/gait_cycle.py`, computed offline at 30 steps a second; the page reads the paw paths and bends
+the legs itself):
+- **Stance:** a paw that is down stays exactly where it landed, on the ground. The body is lowered so that each leg is
+  at about 95% (front) and 92% (hind) of its full length at mid-stance, giving it room to sweep.
+- **Swing:** a paw lifts when the body has carried its shoulder or hip about 5 cm past it, or when it can no longer
+  reach. It swings for 0.3 s (cats' swing time, about constant across speeds), 2.5 to 3.5 cm up, to land ahead by
+  about the distance the body covers in the next 0.3 s.
+- **Order:** at most two paws in the air, never both front or both hind at once; the paw furthest behind goes first.
+- **Turning in place and seam snaps** move the shoulders and hips, so the paws step too.
+- **Playback:** on the copy's walks only, at 30 steps a second, with the cat's place and facing interpolated between
+  the 10 Hz samples (no interpolation across a turn of over 45 degrees in 0.1 s). The recordings and the grey cat are
+  unchanged. `gait=0` in the address shows version 22's walks.
+
+**Pass rules (all needed before the before/after is shown):**
+- **G1, the ruler:** on the 16 free walks, drawn side-on as before, the median leg motion is at least 0.45 (real cats
+  0.60) and the median slip at most 0.25 (real cats 0.16, version 22 0.44).
+- **G2, paws in 3D:** on all copy walks at the 10 Hz samples, paws that are down and slide 1.5 cm or more in 0.1 s
+  are at most 3% of down steps (version 22: 9%). Same rule as before: down means within 2 cm of the cat's lowest
+  point.
+- **G3, the skin:** the share of mesh edges stretched by over 30% is at most 1 point above version 22's walks; and a
+  sheet of each leg's most bent frames shows no tears by eye.
+- **G4, the user:** one before/after of the same walk (version 22 and the cycle) in the browser pane. The user's
+  verdict decides.
+
+**Stop rule:** at most two rounds of adjustment if G1 to G3 fail (crouch depth, step size, smoothing the front legs'
+skin weights). If they still fail, stop and report; version 22 stays. If G4 is not "clearly better", version 22 is
+final and the walking work ends.
+
+**Compute:** CPU only. Cluster jobs that need a GPU allocation for scheduling come out of the exploration hours (about
+2 left).

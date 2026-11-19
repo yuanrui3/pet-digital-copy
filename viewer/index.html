@@ -626,6 +626,16 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
           a2s.ik = { walk: FK.v.walk.data, chains: FK.meta.chains, Jr: FK.meta.rest_joints, stretch: FK.meta.stretch || 1 };
         } catch (e) {}
       }
+      // the walking cycle on the copy's walks (gait=0 in the address shows version 22's walks): per walk frame, three
+      // steps of 1/30 s, each leg's wrist or hock target (room axes, from the cat's place at that frame) and the floor
+      // shift; each leg is bent at its own joints to reach it, elbows towards the tail and knees towards the head
+      if (new URLSearchParams(location.search).get("gait") !== "0") {
+        try {
+          const GT = await load("gait");
+          a2s.gait = { w: GT.v.wrist.data, dy: GT.v.dy.data, sub: GT.meta.sub, chains: GT.meta.chains, Jr: GT.meta.rest_joints,
+                       stretch: GT.meta.stretch, pole: GT.meta.pole, cut: GT.meta.cut_deg };
+        } catch (e) {}
+      }
     } catch (e) {}
     // the recorded skeleton (Lab4D's quadruped: 25 joints in the cat's own frame); parent 0 is drawn at spine 1
     const PARENT = { 1: 0, 13: 0, 18: 0, 22: 0, 2: 1, 3: 2, 4: 3, 5: 3, 9: 3, 6: 5, 7: 6, 8: 7, 10: 9, 11: 10, 12: 11,
@@ -834,6 +844,78 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
       move(bt, R1, H, H); move(bm, Rm, K, K2); move(bw, halfTurn(R2), W, W2); move(bp, [1, 0, 0, 0, 1, 0, 0, 0, 1], P, vadd(P, vsub(W2, W)));
     }
   }
+  // the walking cycle: bend each leg so its wrist or hock reaches its target (cat's frame). As bendLegs, but the target
+  // is given, and the middle joint bends to the side of g.pole (elbows towards the tail, knees towards the head)
+  function bendTo(bf, tgt, g) {
+    const joint = (b) => { const o = 12 * b, J = g.Jr[b];
+      return [bf[o] * J[0] + bf[o + 1] * J[1] + bf[o + 2] * J[2] + bf[o + 3], bf[o + 4] * J[0] + bf[o + 5] * J[1] + bf[o + 6] * J[2] + bf[o + 7],
+              bf[o + 8] * J[0] + bf[o + 9] * J[1] + bf[o + 10] * J[2] + bf[o + 11]]; };
+    const move = (b, Rd, c, c2) => {
+      const o = 12 * b, R = [bf[o], bf[o + 1], bf[o + 2], bf[o + 4], bf[o + 5], bf[o + 6], bf[o + 8], bf[o + 9], bf[o + 10]];
+      const t = vadd(m3.app(Rd, vsub([bf[o + 3], bf[o + 7], bf[o + 11]], c)), c2), R2 = m3.mul(Rd, R);
+      for (let i = 0; i < 3; i++) { bf[o + 4 * i] = R2[3 * i]; bf[o + 4 * i + 1] = R2[3 * i + 1]; bf[o + 4 * i + 2] = R2[3 * i + 2]; bf[o + 4 * i + 3] = t[i]; }
+    };
+    for (let p = 0; p < 4; p++) {
+      const [bt, bm, bw, bp] = g.chains[p], H = joint(bt), K = joint(bm), W = joint(bw), P = joint(bp);
+      const a = vlen(vsub(K, H)), b = vlen(vsub(W, K)), dv = vsub(tgt[p], H), dn = Math.max(vlen(dv), 1e-9);
+      const s = Math.min(Math.max(dn / (0.999 * (a + b)), 1), g.stretch), a2 = a * s, b2 = b * s;
+      const u = vsc(dv, 1 / dn), d = Math.min(Math.max(dn, Math.abs(a2 - b2) + 1e-3), 0.999 * (a2 + b2));
+      const kh = vsub(K, H);
+      let pl = vsub(g.pole[p], vsc(u, vdot(g.pole[p], u)));
+      if (vlen(pl) < 1e-4) pl = vsub(kh, vsc(u, vdot(kh, u)));
+      const v = vsc(pl, 1 / Math.max(vlen(pl), 1e-9));
+      const cosA = Math.min(Math.max((a2 * a2 + d * d - b2 * b2) / (2 * a2 * d), -1), 1), sinA = Math.sqrt(1 - cosA * cosA);
+      const K2 = vadd(H, vsc(vadd(vsc(u, cosA), vsc(v, sinA)), a2)), W2 = vadd(H, vsc(u, d));
+      const R1 = rotBetween(vsc(kh, 1 / a), vsc(vsub(K2, H), 1 / a2)), R2 = rotBetween(vsc(vsub(W, K), 1 / b), vsc(vsub(W2, K2), 1 / b2));
+      const Rm = m3.mul(R1, halfTurn(m3.mul(m3.tr(R1), R2)));
+      move(bt, R1, H, H); move(bm, Rm, K, K2); move(bw, halfTurn(R2), W, W2); move(bp, [1, 0, 0, 0, 1, 0, 0, 0, 1], P, vadd(P, vsub(W2, W)));
+    }
+  }
+  function quat3(h, o) {  // 3x3 (row-major at h[o..]) -> unit quaternion [w, x, y, z]
+    const m00 = h[o], m01 = h[o + 1], m02 = h[o + 2], m10 = h[o + 3], m11 = h[o + 4], m12 = h[o + 5], m20 = h[o + 6], m21 = h[o + 7], m22 = h[o + 8];
+    const tr = m00 + m11 + m22;
+    let w, x, y, z;
+    if (tr >= m00 && tr >= m11 && tr >= m22) { w = 1 + tr; x = m21 - m12; y = m02 - m20; z = m10 - m01; }
+    else if (m00 >= m11 && m00 >= m22) { w = m21 - m12; x = 1 + m00 - m11 - m22; y = m01 + m10; z = m02 + m20; }
+    else if (m11 >= m22) { w = m02 - m20; x = m01 + m10; y = 1 - m00 + m11 - m22; z = m12 + m21; }
+    else { w = m10 - m01; x = m02 + m20; y = m12 + m21; z = 1 - m00 - m11 + m22; }
+    const s = 1 / Math.hypot(w, x, y, z);
+    return [w * s, x * s, y * s, z * s];
+  }
+  // the facing f of the way from frame i to i1, by the shortest turn; held at frame i when that turn is over cut degrees
+  const HB = new Float32Array(9);
+  function headingAt(h, i, i1, f, cut) {
+    const q0 = quat3(h, 9 * i), q1 = quat3(h, 9 * i1);
+    let d = q0[0] * q1[0] + q0[1] * q1[1] + q0[2] * q1[2] + q0[3] * q1[3];
+    if (d < 0) { for (let k = 0; k < 4; k++) q1[k] = -q1[k]; d = -d; }
+    const th = Math.acos(Math.min(d, 1));
+    if (2 * th * 180 / Math.PI > cut) { for (let k = 0; k < 9; k++) HB[k] = h[9 * i + k]; return HB; }
+    const s0 = th < 1e-6 ? 1 - f : Math.sin((1 - f) * th) / Math.sin(th), s1 = th < 1e-6 ? f : Math.sin(f * th) / Math.sin(th);
+    let w = s0 * q0[0] + s1 * q1[0], x = s0 * q0[1] + s1 * q1[1], y = s0 * q0[2] + s1 * q1[2], z = s0 * q0[3] + s1 * q1[3];
+    const n = 1 / Math.hypot(w, x, y, z); w *= n; x *= n; y *= n; z *= n;
+    HB[0] = 1 - 2 * (y * y + z * z); HB[1] = 2 * (x * y - w * z); HB[2] = 2 * (x * z + w * y);
+    HB[3] = 2 * (x * y + w * z); HB[4] = 1 - 2 * (x * x + z * z); HB[5] = 2 * (y * z - w * x);
+    HB[6] = 2 * (x * z - w * y); HB[7] = 2 * (y * z + w * x); HB[8] = 1 - 2 * (x * x + y * y);
+    return HB;
+  }
+  // the cat on a walking-cycle step: bones blended between the two 0.1 s samples, legs bent to their targets
+  // (hm/ho: the facing used, px/py/pz: the cat's place with the floor shift)
+  function poseGait(a, tr, t, sub, hm, ho, px, py, pz) {
+    const G = a.gait, bf = a.bf, n = a.B * 12, w0 = a.walkStart[tr.walk] + t, f = sub / G.sub;
+    const b0 = w0 * n, b1 = (a.walkStart[tr.walk] + Math.min(t + 1, tr.frames - 1)) * n;
+    for (let k = 0; k < n; k++) bf[k] = f ? half(a.walks[b0 + k]) * (1 - f) + half(a.walks[b1 + k]) * f : half(a.walks[b0 + k]);
+    const r = tr.root, tgt = [];
+    for (let p = 0; p < 4; p++) {
+      const o = ((w0 * G.sub + sub) * 4 + p) * 3;
+      const wx = half(G.w[o]) + r[3 * t] - px, wy = half(G.w[o + 1]) + r[3 * t + 1] - py, wz = half(G.w[o + 2]) + r[3 * t + 2] - pz;
+      tgt.push([hm[ho] * wx + hm[ho + 3] * wy + hm[ho + 6] * wz, hm[ho + 1] * wx + hm[ho + 4] * wy + hm[ho + 7] * wz,
+                hm[ho + 2] * wx + hm[ho + 5] * wy + hm[ho + 8] * wz]);
+    }
+    bendTo(bf, tgt, G);
+    skinMesh(bf, a.rest, a.idx, a.w, a.V, a.mesh);
+    const hd = a.mesh.userData.head;
+    if (hd && a.head) skinMesh(bf, a.head.rest, a.head.idx, a.head.w, a.head.V, hd);
+  }
   // the grey and white cat on Pikachu's motion. The two skeletons' bones do not match by name (both were learnt
   // freely), so each grey bone moves rigidly with the blend of Pikachu's bones that move the part of Pikachu its own
   // vertices correspond to (g.mix: [Pikachu bone, weight] pairs; rotation: blended quaternions; translation: where the
@@ -921,40 +1003,53 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     return out;
   }
   const m4 = new THREE.Matrix4();
+  // the cat's place, facing and pose at frame t, step sub (0..2 of 1/30 s; above 0 only on the walking cycle)
+  function placeCat(t, sub) {
+    const tr = home.tracks[home.k], i = t, r = tr.root, h = tr.head, a = home.a2s;
+    const G = a && a.gait && tr.kind === "copy" && a.walks && a.walkStart[tr.walk] !== undefined && !(home.grey && home.grey.on) ? a.gait : null;
+    if (!G) sub = 0;
+    home.gaitOn = !!G;
+    home.sub = sub;
+    // the floor fix (room's y points down), for the frame of the bone motion being shown; the walking cycle's own
+    const dy = !a ? 0 : G ? G.dy[(a.walkStart[tr.walk] + t) * G.sub + sub] : !a.dyRec ? 0 : tr.kind === "rec" ? a.dyRec[tr.jointBase + t] || 0
+      : a.walks && a.walkStart[tr.walk] !== undefined ? a.dyWalk[a.walkStart[tr.walk] + t] || 0 : 0;
+    let hm = h, ho = 9 * i, px = r[3 * i], py = r[3 * i + 1], pz = r[3 * i + 2];
+    if (sub > 0 && i + 1 < tr.frames) {
+      const f = sub / G.sub, j = 3 * (i + 1);
+      hm = headingAt(h, i, i + 1, f, G.cut); ho = 0;
+      px = px * (1 - f) + r[j] * f; py = py * (1 - f) + r[j + 1] * f; pz = pz * (1 - f) + r[j + 2] * f;
+    }
+    py += dy;
+    m4.set(hm[ho], hm[ho + 1], hm[ho + 2], px, hm[ho + 3], hm[ho + 4], hm[ho + 5], py, hm[ho + 6], hm[ho + 7], hm[ho + 8], pz, 0, 0, 0, 1);
+    home.catHolder.matrixAutoUpdate = false;
+    home.catHolder.matrix.copy(m4);
+    if (!a) return;
+    const src = tr.kind === "rec" ? a.bones : a.walks && a.walkStart[tr.walk] !== undefined ? a.walks : null;
+    const base = (tr.kind === "rec" ? tr.jointBase + t : src ? a.walkStart[tr.walk] + t : 0) * a.B * 12;
+    // planted paws: Pikachu on the copy's own walks only (the recordings stay as estimated; the grey cat follows
+    // only Pikachu's bones and gains little, so it is left as it was); the walking cycle replaces them when loaded
+    const S = a.ik, fi = tr.kind === "copy" && src ? a.walkStart[tr.walk] + t : -1;
+    const pre = S && fi >= 0 ? (bf) => bendLegs(bf, S.walk, fi, S) : null;
+    if (src && home.grey && home.grey.on) poseGrey(home.grey, a, src, base, h[9 * i + 3], h[9 * i + 4], h[9 * i + 5]);
+    else if (G) poseGait(a, tr, t, sub, hm, ho, px, py, pz);
+    else if (src) poseA2S(a, src, base, a.mesh, pre);
+    if (sub) return;  // the pale real cat beside a replay moves at the 0.1 s samples
+    // beside a replay: the real cat at the same moment of the same recording, as a lighter ghost
+    const rec = tr.sub === "replay" ? home.tracks[tr.video] : null;
+    a.ghostHolder.visible = !!rec && t < rec.frames;
+    if (a.ghostHolder.visible) {
+      rootMatrix(a.ghostHolder.matrix, rec.head, rec.root, t);
+      if (a.dyRec) a.ghostHolder.matrix.elements[13] += a.dyRec[rec.jointBase + t] || 0;
+      poseA2S(a, a.bones, (rec.jointBase + t) * a.B * 12, a.ghost);
+    }
+  }
   function setHomeTime(t) {
     home.t = t;
     const tr = home.tracks[home.k], i = t, r = tr.root, h = tr.head, c = tr.cam;
-    const a0 = home.a2s;  // the floor fix (room's y points down), for the frame of the bone motion being shown
-    const dy = !a0 || !a0.dyRec ? 0 : tr.kind === "rec" ? a0.dyRec[tr.jointBase + t] || 0
-      : a0.walks && a0.walkStart[tr.walk] !== undefined ? a0.dyWalk[a0.walkStart[tr.walk] + t] || 0 : 0;
-    m4.set(h[9 * i], h[9 * i + 1], h[9 * i + 2], r[3 * i],
-           h[9 * i + 3], h[9 * i + 4], h[9 * i + 5], r[3 * i + 1] + dy,
-           h[9 * i + 6], h[9 * i + 7], h[9 * i + 8], r[3 * i + 2],
-           0, 0, 0, 1);
-    home.catHolder.matrixAutoUpdate = false;
-    home.catHolder.matrix.copy(m4);
+    placeCat(t, 0);
     home.person.position.set(c[3 * i], c[3 * i + 1], c[3 * i + 2]);
     home.person.lookAt(r[3 * i], r[3 * i + 1], r[3 * i + 2]);
     home.active.geometry.setDrawRange(0, t + 1);
-    const a = home.a2s;
-    if (a) {
-      const src = tr.kind === "rec" ? a.bones : a.walks && a.walkStart[tr.walk] !== undefined ? a.walks : null;
-      const base = (tr.kind === "rec" ? tr.jointBase + t : src ? a.walkStart[tr.walk] + t : 0) * a.B * 12;
-      // planted paws: Pikachu on the copy's own walks only (the recordings stay as estimated; the grey cat follows
-      // only Pikachu's bones and gains little, so it is left as it was)
-      const S = a.ik, fi = tr.kind === "copy" && src ? a.walkStart[tr.walk] + t : -1;
-      const pre = S && fi >= 0 ? (bf) => bendLegs(bf, S.walk, fi, S) : null;
-      if (src && home.grey && home.grey.on) poseGrey(home.grey, a, src, base, h[9 * i + 3], h[9 * i + 4], h[9 * i + 5]);
-      else if (src) poseA2S(a, src, base, a.mesh, pre);
-      // beside a replay: the real cat at the same moment of the same recording, as a lighter ghost
-      const rec = tr.sub === "replay" ? home.tracks[tr.video] : null;
-      a.ghostHolder.visible = !!rec && t < rec.frames;
-      if (a.ghostHolder.visible) {
-        rootMatrix(a.ghostHolder.matrix, rec.head, rec.root, t);
-        if (a.dyRec) a.ghostHolder.matrix.elements[13] += a.dyRec[rec.jointBase + t] || 0;
-        poseA2S(a, a.bones, (rec.jointBase + t) * a.B * 12, a.ghost);
-      }
-    }
     if (home.skel && tr.jointBase !== null) {
       const a = home.skel.geometry.attributes.position.array, J = home.joints, base = (tr.jointBase + i) * 75;
       home.edges.forEach(([cc, q], e) => {
@@ -1131,6 +1226,18 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
       }
       document.body.dataset.iktest = JSON.stringify(worst);
     }
+    if (qs.has("gaittest") && home.a2s && home.a2s.gait) {  // the page's walking cycle against the cluster's, on a few steps
+      const tests = (await get("data/gait_test.json", "json")).tests, a = home.a2s, worst = [], k0 = home.k;
+      for (const tc of tests) {
+        home.k = home.tracks.findIndex((x) => x.kind === "copy" && x.walk === tc.run);
+        placeCat(Math.floor(tc.step / a.gait.sub), tc.step % a.gait.sub);
+        let w = 0;
+        tc.chain_bones.flat().forEach((b, k) => { for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) w = Math.max(w, Math.abs(a.bf[12 * b + 4 * i + j] - tc.bones[k][i][j])); });
+        worst.push(+w.toExponential(2));
+      }
+      setVideo(k0);
+      document.body.dataset.gaittest = JSON.stringify(worst);
+    }
     if (qs.has("call")) callCatTo(+qs.get("call"), false);
     if (qs.has("homecat")) { $("home-cat").value = qs.get("homecat"); $("home-cat").dispatchEvent(new Event("change")); }
     if (qs.has("place")) { const [px, pz] = qs.get("place").split(",").map(Number); placePersonAt(px, pz, false); }
@@ -1166,6 +1273,11 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
           setHomeTime(Math.min(n - 1, home.t + Math.floor(home.acc)));
           home.acc -= Math.floor(home.acc);
           if (home.t >= n - 1) { home.playing = false; $("home-play").textContent = "Play"; setPurr(false); }
+        }
+        // the walking cycle moves at 30 steps a second between the 0.1 s samples
+        if (home.playing && home.gaitOn && home.t < home.tracks[home.k].frames - 1) {
+          const s = Math.min(2, Math.floor(home.acc * 3));
+          if (s !== home.sub) placeCat(home.t, s);
         }
       }
       // walk cycle from the body clip while the cat moves
