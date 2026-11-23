@@ -12,8 +12,12 @@ repository, split out on its own.
 ## Where to start
 
 - `PROTOCOL_CAT.md`: everything about how the cat looks and moves at home. It records every attempt, what was
-  measured, what was kept and why, in order. The latest sections are "Finishing the graft" (the live version, 22) and
-  "The whole Body tab cat at home: one-day test" (an outside review and the test it led to).
+  measured, what was kept and why, in order, with each attempt's pass rules written before it was run. The work
+  stopped at version 25 (2026-11-22). The last sections:
+  - "A built-in walking cycle on the copy's walks" (version 23);
+  - "A cast shadow at home" (version 24);
+  - "The head kept off the left front leg, on its own" (version 25);
+  - "A video-model judge": V-JEPA 2 on silhouettes, built and not adopted.
 - `PROTOCOL_BEHAVIOUR.md`, `PROTOCOL_STIMULUS.md`: the behaviour model (where the cat goes, how it reacts to people).
 - `PROTOCOL.md`: the overall plan.
 - `viewer/index.html`: the page (three.js; the cat is skinned on the CPU every frame).
