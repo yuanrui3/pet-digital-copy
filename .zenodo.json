@@ -1,0 +1,17 @@
+{
+  "title": "Pet Digital Copy: 3D reconstruction and animation of a house cat",
+  "creators": [
+    {
+      "name": "Chen, Yuanrui"
+    }
+  ],
+  "description": "Source code, a browser viewer, and research protocols for reconstructing and animating one house cat from publicly available research videos. The archive documents the experiments through version 25. The source videos, external models, meshes, textures, and rendered outputs are not included. The MIT license applies to the original code and documentation in this repository; external materials retain their own terms.",
+  "license": "mit",
+  "upload_type": "software",
+  "keywords": [
+    "3D reconstruction",
+    "animal motion",
+    "computer vision",
+    "animation"
+  ]
+}
