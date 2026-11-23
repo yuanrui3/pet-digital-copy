@@ -160,7 +160,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
 
   <div class="notes">
     <div class="note"><h2>Body</h2><p id="note-body">A 3D reconstruction (Lab4D) of a twelve-second video of the cat. For a test, the model never saw the colours of the shaded stretch of the timeline. "As trained, frame by frame" shows how its idea of the lighting drifted there; "Steady coat" uses one well-lit moment for the whole clip.</p><p>"Photo coat" is not the model's own colouring: it paints the video's pixels onto the model's surface, using the model's camera and pose for each of the 76 frames. Each spot takes its colour from the frames that saw it most head-on and agree with each other; spots the camera never saw well, such as the belly, keep the model's colours.</p></div>
-    <div class="note"><h2>At home</h2><p>The room is the owner's phone scan. The lines are where the cat actually went in 19 home videos over a month (19 minutes in all). The cat here is Agent-to-Sim's reconstruction of Pikachu from that whole month, and it moves its body exactly as it did on camera: eating, sitting by the litter box, curling up on the sofa. The small orange phone marks the person filming.</p><p>Its coat comes from the Body tab's photo coat. The month of home video was filmed mostly from across the room, so the reconstruction's own coat was a smooth pale blur with no eyes, nose or mouth. The whole cat now wears the coat from the twelve-second close-up video, fitted onto this cat's body. About a quarter of it is a smooth blend of the fur around it: where that video never saw the fur clearly (the belly, the backs of the hind legs, behind the ears), and where the two cats' different shapes made a dark mark (behind the cheek, on the back thigh).</p><p>Its head is the Body tab cat's own head, with that cat's own photo coat, set on this body and turned by this cat's head bones. The reconstruction's own head was a tall box with thin spiky ears, and the face, made for a rounder head, sat to one side of it. The new head is cut off behind the ears and under the chin. The neck is stretched smoothly to meet it, and the head's fur blends into the body's over the last 1.5 cm. Under the chin its cheeks stand out past the neck, as a real cat's do. Spots on the head that the close-up video never saw clearly, such as the top of the head, are smoothed over from the fur around them.</p><p>Each frame the cat is lowered or raised onto the scan's floor when it is within 8 cm of it (left alone further up, as on the sofa). Placed as recorded, its paws were mostly inside the floor: by 2 cm on the recordings and 4 cm on the copy's walks (median), and by over 7 cm a tenth of the time; now by under 0.1 cm (median), and within about 2 cm eight times in ten. In the recordings its paws still slide at times: a paw that is down moves 1.5 cm or more in 0.1 s on 42% of the steps, because the estimated motion glides the body along on nearly straight legs.</p><p>On the copy's own walks Pikachu's paws are planted: a paw that comes down stays where it landed, each leg bending at its own joints (and lengthening by up to 5%, about as much as the model's legs vary anyway) to keep it there, and when it can reach no further it takes a short step, two paws at most in the air at once. Slow skating (1.5 to 3 cm in 0.1 s) fell from 16% to 4% of steps, and the paws that slide 1.5 cm or more from 34% to 9%. It missed one part of the bar set before the try: the skin stretches a little more than allowed (edges stretched by over 30%: 1.1 points more, against a limit of 1). It is shown anyway, because the steps look far more natural than gliding. The recordings are left as estimated, and the grey and white cat is left as it was.</p></div>
+    <div class="note"><h2>At home</h2><p>The room is the owner's phone scan. The lines are where the cat actually went in 19 home videos over a month (19 minutes in all). The cat here is Agent-to-Sim's reconstruction of Pikachu from that whole month, and it moves its body exactly as it did on camera: eating, sitting by the litter box, curling up on the sofa. The small orange phone marks the person filming.</p><p>Its coat comes from the Body tab's photo coat. The month of home video was filmed mostly from across the room, so the reconstruction's own coat was a smooth pale blur with no eyes, nose or mouth. The whole cat now wears the coat from the twelve-second close-up video, fitted onto this cat's body. About a quarter of it is a smooth blend of the fur around it: where that video never saw the fur clearly (the belly, the backs of the hind legs, behind the ears), and where the two cats' different shapes made a dark mark (behind the cheek, on the back thigh).</p><p>Its head is the Body tab cat's own head, with that cat's own photo coat, set on this body and turned by this cat's head bones. The reconstruction's own head was a tall box with thin spiky ears, and the face, made for a rounder head, sat to one side of it. The new head is cut off behind the ears and under the chin. The neck is stretched smoothly to meet it, and the head's fur blends into the body's over the last 1.5 cm. Under the chin its cheeks stand out past the neck, as a real cat's do. Spots on the head that the close-up video never saw clearly, such as the top of the head, are smoothed over from the fur around them.</p><p>Each frame the cat is lowered or raised onto the scan's floor when it is within 8 cm of it (left alone further up, as on the sofa). Placed as recorded, its paws were mostly inside the floor: by 2 cm on the recordings and 4 cm on the copy's walks (median), and by over 7 cm a tenth of the time; now by under 0.1 cm (median), and within about 2 cm eight times in ten. In the recordings its paws still slide at times: a paw that is down moves 1.5 cm or more in 0.1 s on 42% of the steps, because the estimated motion glides the body along on nearly straight legs.</p><p>The cat casts a soft shadow, as if lit from the room's bright end wall (where the windows probably are, judged from the brightest part of the scan, so its direction is a guess), and each paw darkens the floor a little where it touches. The shadow is drawn on the scanned floor under the cat, which is uneven by a few centimetres. Add shadow=0 to the address to see the cat without it.</p><p>On the copy's own walks Pikachu's legs follow a built-in walking cycle, made from published measurements of walking cats rather than from the estimated motion, whose legs barely move. A paw that comes down stays exactly where it landed. It lifts once the body has carried its shoulder or hip about 5 cm past it, swings for 0.3 s (about a cat's swing time) a few centimetres up, and lands ahead; at most two paws are up at once, never both front or both hind. Each leg bends at its own elbow or knee, up to 70 degrees, and the body is lowered about 2 cm so the legs have room to bend. The bone that turns the head and neck is left out of the bending: in the learnt skeleton it also sits in the left front leg, so bending that leg used to swing the head about 3 cm with each step (now about 1 cm). On these walks the cat moves 30 times a second instead of 10. Measured on the copy's walks, paws that slide 1.5 cm or more while down fell from 9% to 4% of steps, and seen from the side the legs now move about as much as a real cat's (0.56 on our measure, against 0.60 for real cats and 0.34 before). It missed two of the bars set before the try: some paws still slide where a leg would have to bend further than 70 degrees, and the skin at the hips and shoulders stretches more (edges stretched by over 30%: 2.0 points more, against a limit of 1), most of all on the right hind leg. It is shown anyway because, side by side, the walking looks clearly better. The recordings are left as estimated, and the grey and white cat keeps its earlier walks.</p></div>
     <div class="note"><h2>The copy on its own</h2><p>In these walks nothing is replayed: a behaviour model (Agent-to-Sim's, trained here on 17 of the 19 videos) picks where the cat goes next, 5.6 s at a time, and how its body moves, for about a minute. Each walk starts from a real moment in one of the two videos it never trained on. Asked to predict those two videos 5.6 s ahead, it placed the route about twice as close as replaying the cat's most similar recorded moments (0.16 m off against 0.35 m), but its guesses of where the cat ends up bunched together and were barely better (0.78 m against 0.79 m).</p><p>So these walks use a changed goal choice, with no retraining: every 5.6 s, a quarter of the time the copy heads for one of the spots where the real cat often ended up (within 3 m of where it is), otherwise for a place of its own choosing. A quarter was picked so that the walks move as much as the real cat does in the videos it trained on: 0.56 m per 5.6 s on average, against the real cat's 0.54 m (heading for a spot half the time made them move 0.86 m; never, 0.23 m). Scored on the two unseen videos, the best of its 16 guesses landed 0.57 m from where the cat really went, against 0.78 m before and 0.76 m for guessing the cat's usual spots alone, and it also did better on a score that does not reward scattered guesses. The walks under "Where you put the person" and "Calling the cat" keep the old goal choice, since their results were measured with it.</p></div>
     <div class="note"><h2>Where you put the person</h2><p>Press "Place the person" and click near one of the 12 rings, the places where people really stood while filming. The copy then walks for 34 s with the person standing there; where the person is, is the only thing it reacts to. Under "The copy beside the real cat", the copy and the real cat (pale) start together in the two videos it never trained on, with the person moving as they really did.</p><p>It does react: moving the person to the opposite side of the cat changes where the copy heads by about 0.57 m, against 0.02 m between two random draws, and removing the person changes it by 0.46 m. But it does not simply head for the person: after the move it shifts toward the person's new side only 59% of the time, and it ends up nearer the person 41% of the time, about as often as the real cat did (38%). The person filming usually follows the cat, so the model may have learned where the person goes rather than how the cat responds.</p></div>
     <div class="note"><h2>Calling the cat</h2><p>Press "Call the cat" and click one of the 12 blue spots, places where the real cat often was (on the floor or up on furniture). The copy is given that spot as its goal and gets there by its own route and gait, then carries on by itself.</p><p>What else it reacts to: switching off its view of the room shifts where it heads by about 0.12 m, against 0.02 m between two random draws; yet its goals land where the real cat has been almost as often without the room (87%) as with it (90%). A person walking matters far more: compared with the same person walking away, the copy's goal moves about a metre, and in 4 of 5 moments an approaching person pushes it away. That may be the filming habit again: the person walked toward the cat mostly when it was leaving, and the model cannot tell the two apart.</p></div>
@@ -222,6 +222,8 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.localClippingEnabled = true;
+  renderer.shadowMap.enabled = true;  // the cast shadow at home
+  renderer.shadowMap.type = THREE.PCFShadowMap;  // with a wide filter radius: soft, as window light is
   stage.prepend(renderer.domElement);
   function stageColour() { renderer.setClearColor(new THREE.Color(css("--stage") || "#ebe6df")); }
   stageColour();
@@ -525,6 +527,26 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     for (let i = 1; i < rp.length; i += 30) ys.push(-rp[i]);
     ys.sort((a, b) => a - b);
     const floorY = ys[Math.floor(ys.length * 0.02)];
+    // the scanned floor's own height in 4 cm cells (room frame, y down), for the contact shadows: the median of the
+    // scan points in each cell within 3 cm of that cell's lowest point (the scan's floor is uneven by several cm, and
+    // a few stray points lie below it)
+    const floorMap = (() => {
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (let i = 0; i < rp.length; i += 3) { x0 = Math.min(x0, rp[i]); x1 = Math.max(x1, rp[i]); z0 = Math.min(z0, rp[i + 2]); z1 = Math.max(z1, rp[i + 2]); }
+      const c = 0.04, nx = Math.ceil((x1 - x0) / c) + 1, nz = Math.ceil((z1 - z0) / c) + 1, cells = new Map();
+      for (let i = 0; i < rp.length; i += 3) {
+        const k = Math.floor((rp[i] - x0) / c) * nz + Math.floor((rp[i + 2] - z0) / c);
+        if (!cells.has(k)) cells.set(k, []);
+        cells.get(k).push(rp[i + 1]);
+      }
+      const h = new Float32Array(nx * nz).fill(-Infinity);
+      cells.forEach((v, k) => {
+        v.sort((p, q) => p - q);
+        const lowest = v[Math.floor(0.95 * (v.length - 1))], band = v.filter((y) => y > lowest - 0.03);
+        h[k] = band[band.length >> 1];
+      });
+      return { x0, z0, c, nx, nz, h };
+    })();
     const clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), floorY + 1.45);
     const rg = new THREE.BufferGeometry();
     rg.setAttribute("position", new THREE.BufferAttribute(room.v.pos.data, 3));
@@ -626,6 +648,16 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
           a2s.ik = { walk: FK.v.walk.data, chains: FK.meta.chains, Jr: FK.meta.rest_joints, stretch: FK.meta.stretch || 1 };
         } catch (e) {}
       }
+      // contact shadows at home: Pikachu's paws are the vertices its four paw bones move most
+      a2s.paws = [11, 7, 24, 20].map((pb) => {
+        const s = [];
+        for (let v = 0; v < a2s.V; v++) {
+          let bi = 0;
+          for (let j = 1; j < 4; j++) if (a2s.w[4 * v + j] > a2s.w[4 * v + bi]) bi = j;
+          if (a2s.idx[4 * v + bi] === pb) s.push(v);
+        }
+        return s;
+      });
       // the walking cycle on the copy's walks (gait=0 in the address shows version 22's walks): per walk frame, three
       // steps of 1/30 s, each leg's wrist or hock target (room axes, from the cat's place at that frame) and the floor
       // shift; each leg is bent at its own joints to reach it, elbows towards the tail and knees towards the head
@@ -633,7 +665,9 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
         try {
           const GT = await load("gait");
           a2s.gait = { w: GT.v.wrist.data, dy: GT.v.dy.data, sub: GT.meta.sub, chains: GT.meta.chains, Jr: GT.meta.rest_joints,
-                       stretch: GT.meta.stretch, pole: GT.meta.pole, cut: GT.meta.cut_deg };
+                       stretch: GT.meta.stretch, pole: GT.meta.pole, cut: GT.meta.cut_deg, maxBend: GT.meta.max_bend_deg || 180,
+                       pitch: GT.v.pitch ? GT.v.pitch.data : null, pivot: GT.v.pivot ? GT.v.pivot.data : null,
+                       roll: GT.v.roll ? GT.v.roll.data : null, protect: GT.meta.protect || null };
         } catch (e) {}
       }
     } catch (e) {}
@@ -752,9 +786,50 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     if (a2s && a2s.walks) {  // where each walk's bones start
       let off = 0; a2s.walkStart = (a2s.walkFrames || []).map((f) => { const o = off; off += f; return o; });
     }
+    // contact shadows: a soft oval under the body and a darker spot under each paw, on the floor or on whatever the
+    // cat stands on (shadow=0 in the address turns them off)
+    const pawTex = (() => {
+      const c = document.createElement("canvas"); c.width = c.height = 64;
+      const x = c.getContext("2d"), gr = x.createRadialGradient(32, 32, 2, 32, 32, 32);
+      gr.addColorStop(0, "rgba(0,0,0,0.7)"); gr.addColorStop(0.5, "rgba(0,0,0,0.32)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+      x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(c);
+    })();
+    const bodyTex = (() => {
+      const c = document.createElement("canvas"); c.width = c.height = 128;
+      const x = c.getContext("2d"), gr = x.createRadialGradient(64, 64, 4, 64, 64, 64);
+      gr.addColorStop(0, "rgba(0,0,0,0.5)"); gr.addColorStop(0.6, "rgba(0,0,0,0.22)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+      x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    })();
+    const flatGeo = new THREE.PlaneGeometry(1, 1);
+    flatGeo.rotateX(Math.PI / 2);  // lying on the room's floor plane
+    const mkShadow = (map) => {
+      const m = new THREE.Mesh(flatGeo, new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+                                                                    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+      m.renderOrder = 1; m.visible = false; world.add(m); return m;
+    };
+    // the cast shadow: a light of zero brightness (the cat's shading does not change; it only casts) from the bright
+    // end wall of the scan (z = -4.4 m, likely windows), 45 degrees up; a shadow-only plane catches it on the floor
+    const sun = new THREE.DirectionalLight(0xffffff, 0);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(sun.shadow.camera, { left: -0.8, right: 0.8, top: 0.8, bottom: -0.8, near: 0.1, far: 4 });
+    sun.shadow.camera.updateProjectionMatrix();
+    sun.shadow.bias = -0.0005;
+    sun.shadow.radius = 8;
+    world.add(sun); world.add(sun.target);
+    const catcher = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4).rotateX(Math.PI / 2),
+                                   new THREE.ShadowMaterial({ opacity: 0.25, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    catcher.receiveShadow = true; catcher.visible = false;
+    world.add(catcher);
+    if (a2s) { a2s.mesh.castShadow = true; if (a2s.mesh.userData.head) a2s.mesh.userData.head.castShadow = true; }
+    const shadows = { body: mkShadow(bodyTex), paws: [0, 1, 2, 3].map(() => mkShadow(pawTex)), sun, catcher,
+                      light: new THREE.Vector3(0, Math.SQRT1_2, Math.SQRT1_2),  // the light's travel, room frame (y down)
+                      off: new URLSearchParams(location.search).get("shadow") === "0" };
     home = { scene, world, tracks, active, homeCat, catHolder, person, allPaths, fps: pm.fps, k: 0, t: 0, playing: false,
              acc: 0, near: false, skel, joints, edges, pathCol, copyCol, a2s, spots, markers, floorY, recCount: pm.videos.length,
-             places, placeMarks, placePicks, goalMark };
+             places, placeMarks, placePicks, goalMark, shadows, floorMap };
     // start on the longest recording
     let best = 0; pm.videos.forEach((v, k) => { if (v.frames > pm.videos[best].frames) best = k; });
     sel.value = String(best);
@@ -859,7 +934,8 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
       const [bt, bm, bw, bp] = g.chains[p], H = joint(bt), K = joint(bm), W = joint(bw), P = joint(bp);
       const a = vlen(vsub(K, H)), b = vlen(vsub(W, K)), dv = vsub(tgt[p], H), dn = Math.max(vlen(dv), 1e-9);
       const s = Math.min(Math.max(dn / (0.999 * (a + b)), 1), g.stretch), a2 = a * s, b2 = b * s;
-      const u = vsc(dv, 1 / dn), d = Math.min(Math.max(dn, Math.abs(a2 - b2) + 1e-3), 0.999 * (a2 + b2));
+      const dmin = Math.sqrt(Math.max(a2 * a2 + b2 * b2 + 2 * a2 * b2 * Math.cos(g.maxBend * Math.PI / 180), 0));  // reach at the bend limit
+      const u = vsc(dv, 1 / dn), d = Math.min(Math.max(dn, Math.max(Math.abs(a2 - b2) + 1e-3, dmin)), 0.999 * (a2 + b2));
       const kh = vsub(K, H);
       let pl = vsub(g.pole[p], vsc(u, vdot(g.pole[p], u)));
       if (vlen(pl) < 1e-4) pl = vsub(kh, vsc(u, vdot(kh, u)));
@@ -868,7 +944,11 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
       const K2 = vadd(H, vsc(vadd(vsc(u, cosA), vsc(v, sinA)), a2)), W2 = vadd(H, vsc(u, d));
       const R1 = rotBetween(vsc(kh, 1 / a), vsc(vsub(K2, H), 1 / a2)), R2 = rotBetween(vsc(vsub(W, K), 1 / b), vsc(vsub(W2, K2), 1 / b2));
       const Rm = m3.mul(R1, halfTurn(m3.mul(m3.tr(R1), R2)));
-      move(bt, R1, H, H); move(bm, Rm, K, K2); move(bw, halfTurn(R2), W, W2); move(bp, [1, 0, 0, 0, 1, 0, 0, 0, 1], P, vadd(P, vsub(W2, W)));
+      const keep = (b) => g.protect && g.protect.includes(b);  // bones the leg bending leaves alone (bone 9 moves the head)
+      if (!keep(bt)) move(bt, R1, H, H);
+      if (!keep(bm)) move(bm, Rm, K, K2);
+      if (!keep(bw)) move(bw, halfTurn(R2), W, W2);
+      if (!keep(bp)) move(bp, [1, 0, 0, 0, 1, 0, 0, 0, 1], P, vadd(P, vsub(W2, W)));
     }
   }
   function quat3(h, o) {  // 3x3 (row-major at h[o..]) -> unit quaternion [w, x, y, z]
@@ -904,6 +984,22 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     const G = a.gait, bf = a.bf, n = a.B * 12, w0 = a.walkStart[tr.walk] + t, f = sub / G.sub;
     const b0 = w0 * n, b1 = (a.walkStart[tr.walk] + Math.min(t + 1, tr.frames - 1)) * n;
     for (let k = 0; k < n; k++) bf[k] = f ? half(a.walks[b0 + k]) * (1 - f) + half(a.walks[b1 + k]) * f : half(a.walks[b0 + k]);
+    if (G.pitch) {  // level the body: every bone turned about the cat's x axis (pitch), then its z axis (roll), through
+      // the pivot, so all four legs bend alike
+      const q = w0 * G.sub + sub, th = G.pitch[q], ph = G.roll ? G.roll[q] : 0;
+      const c = [G.pivot[3 * q], G.pivot[3 * q + 1], G.pivot[3 * q + 2]];
+      const R = m3.mul([Math.cos(ph), -Math.sin(ph), 0, Math.sin(ph), Math.cos(ph), 0, 0, 0, 1],
+                       [1, 0, 0, 0, Math.cos(th), -Math.sin(th), 0, Math.sin(th), Math.cos(th)]);
+      const Rc = m3.app(R, c), dc = [c[0] - Rc[0], c[1] - Rc[1], c[2] - Rc[2]];
+      for (let b = 0; b < a.B; b++) {
+        const o = 12 * b;
+        for (let j = 0; j < 4; j++) {
+          const x = bf[o + j], y = bf[o + 4 + j], z = bf[o + 8 + j];
+          bf[o + j] = R[0] * x + R[1] * y + R[2] * z; bf[o + 4 + j] = R[3] * x + R[4] * y + R[5] * z; bf[o + 8 + j] = R[6] * x + R[7] * y + R[8] * z;
+        }
+        bf[o + 3] += dc[0]; bf[o + 7] += dc[1]; bf[o + 11] += dc[2];
+      }
+    }
     const r = tr.root, tgt = [];
     for (let p = 0; p < 4; p++) {
       const o = ((w0 * G.sub + sub) * 4 + p) * 3;
@@ -1003,6 +1099,62 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     return out;
   }
   const m4 = new THREE.Matrix4();
+  // contact shadows: the ground under the cat is the room's floor when its lowest point is within 8 cm of it, else
+  // that lowest point (furniture). The body's oval follows the posed outline along the cat's heading and fades as the
+  // whole cat rises; each paw's spot is darkest with the paw down and gone by 3 cm up (Pikachu only).
+  function updateShadows() {
+    const S = home.shadows, a = home.a2s;
+    S.paws.forEach((m) => { m.visible = false; });
+    S.body.visible = false;  // the cast shadow replaces the soft oval
+    S.catcher.visible = !!a && !S.off;
+    S.sun.castShadow = S.catcher.visible;
+    if (!S.catcher.visible) return;
+    const grey = !!(home.grey && home.grey.on), pos = (grey ? home.grey.mesh : a.mesh).geometry.attributes.position.array;
+    const e = home.catHolder.matrix.elements;  // cat's frame -> room (y down)
+    const fl = Math.hypot(e[8], e[10]) || 1, ux = -e[8] / fl, uz = -e[10] / fl;  // the cat's forward, level
+    const room = (v) => { const x = pos[3 * v], y = pos[3 * v + 1], z = pos[3 * v + 2];
+      return [e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]]; };
+    let low = -Infinity, f0 = Infinity, f1 = -Infinity, l0 = Infinity, l1 = -Infinity;
+    for (let v = 0; v < pos.length / 3; v += 7) {
+      const [X, Y, Z] = room(v), f = X * ux + Z * uz, l = -X * uz + Z * ux;
+      if (Y > low) low = Y;
+      if (f < f0) f0 = f; if (f > f1) f1 = f; if (l < l0) l0 = l; if (l > l1) l1 = l;
+    }
+    const fm = home.floorMap;
+    const floorAt = (x, z) => {  // the scanned floor here: median of the 3x3 cells around, else the room's floor height
+      const i = Math.floor((x - fm.x0) / fm.c), j = Math.floor((z - fm.z0) / fm.c), v = [];
+      for (let a = i - 1; a <= i + 1; a++) for (let b = j - 1; b <= j + 1; b++)
+        if (a >= 0 && a < fm.nx && b >= 0 && b < fm.nz && fm.h[a * fm.nz + b] > -Infinity) v.push(fm.h[a * fm.nz + b]);
+      if (!v.length) return -home.floorY;
+      v.sort((p, q) => p - q);
+      return v[v.length >> 1];
+    };
+    const cf = (f0 + f1) / 2, cl = (l0 + l1) / 2, bx = cf * ux - cl * uz, bz = cf * uz + cl * ux;
+    // the oval is flat but the scan's floor is not: it sits at the highest floor under its centre and its four ends,
+    // and never below the cat, so no part of it is hidden under the floor
+    const hl = (f1 - f0) * 0.575, hw = (l1 - l0) * 0.75;
+    let floor = Infinity;
+    for (const [df, dl] of [[0, 0], [hl, 0], [-hl, 0], [0, hw], [0, -hw]]) floor = Math.min(floor, floorAt(bx + df * ux - dl * uz, bz + df * uz + dl * ux));
+    const ground = Math.abs(low - floor) < 0.08 ? Math.min(floor, low) : low;
+    // the cast shadow: the catcher at the highest floor under the cat and where its shadow falls, the light aimed at it
+    const L = S.light, sl = Math.hypot(L.x, L.z) || 1, sx0 = bx + 0.35 * L.x / sl, sz0 = bz + 0.35 * L.z / sl;
+    const cground = Math.abs(low - Math.min(floor, floorAt(sx0, sz0))) < 0.08 ? Math.min(floor, floorAt(sx0, sz0), low) : low;
+    S.catcher.position.set((bx + sx0) / 2, cground - 0.003, (bz + sz0) / 2);
+    S.sun.target.position.set(bx, cground, bz);
+    S.sun.position.set(bx - 2 * L.x, cground - 2 * L.y, bz - 2 * L.z);
+    S.sun.target.updateMatrixWorld();
+    if (grey || !a.paws) return;
+    a.paws.forEach((set, p) => {
+      let pl = -Infinity, sx = 0, sz = 0;
+      for (const v of set) { const [X, Y, Z] = room(v); if (Y > pl) pl = Y; sx += X; sz += Z; }
+      const m = S.paws[p], px = sx / set.length, pz = sz / set.length, gf = floorAt(px, pz);
+      const gp = Math.abs(pl - gf) < 0.08 ? Math.min(gf, Math.max(pl, low)) : pl;
+      m.visible = set.length > 0;
+      m.position.set(px, gp - 0.005, pz);
+      m.scale.set(0.07, 1, 0.07);
+      m.material.opacity = Math.max(0, 1 - Math.max(gp - pl, 0) / 0.03);
+    });
+  }
   // the cat's place, facing and pose at frame t, step sub (0..2 of 1/30 s; above 0 only on the walking cycle)
   function placeCat(t, sub) {
     const tr = home.tracks[home.k], i = t, r = tr.root, h = tr.head, a = home.a2s;
@@ -1033,6 +1185,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
     if (src && home.grey && home.grey.on) poseGrey(home.grey, a, src, base, h[9 * i + 3], h[9 * i + 4], h[9 * i + 5]);
     else if (G) poseGait(a, tr, t, sub, hm, ho, px, py, pz);
     else if (src) poseA2S(a, src, base, a.mesh, pre);
+    updateShadows();
     if (sub) return;  // the pale real cat beside a replay moves at the 0.1 s samples
     // beside a replay: the real cat at the same moment of the same recording, as a lighter ghost
     const rec = tr.sub === "replay" ? home.tracks[tr.video] : null;
@@ -1157,6 +1310,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 
         const tex = await new Promise((ok, bad) => new THREE.TextureLoader().load("data/" + G.meta.texture, ok, undefined, bad));
         tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
         const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex }));
+        mesh.castShadow = true;
         home.catHolder.add(mesh);
         const B = G.meta.bones;
         home.grey = { mesh, rest: G.v.pos.data, idx: G.v.skin_idx.data, w: G.v.skin_w.data, V: G.meta.vertices, B,

@@ -4,7 +4,7 @@ with version 22's walks measured the same way beside it.
     lowest point at both samples) whose paw moves 1.5 cm or more across the room (feet_fix.slide_share's rule);
   - G3, the skin: on 200 walk frames drawn at random (the same for both), the share of Pikachu's mesh edges stretched
     by over 30% against the rest shape (feet_ik's rule); and a sheet of each leg's three most bent frames, plain grey
-    from the side;
+    from the side and the front, each beside version 22 at the same frame;
   - leg bend read-outs: the middle joint's bend from straight, and each leg's extension, while its paw is down.
 CPU only.
 usage: python gait_check.py PAGE_DIR IK_DIR FLOOR_DIR GAIT_DIR OUT_DIR"""
@@ -111,8 +111,12 @@ for p, (bt, bm, bw, _) in enumerate(CHAINS):
     row = []
     for f in top:
         X = lbs(pg.P, pg.ip, pg.wp, allb[f].astype(np.float64))
-        row.append(render(X, pg.fp, np.zeros((len(X), 2)), grey, "side", size=260))
-        row.append(render(X, pg.fp, np.zeros((len(X), 2)), grey, "front", size=260))
+        ti = max(k for k, (_, b0_, _) in enumerate(rows) if b0_ <= f)
+        T22 = versions({"bones": walks[ti]["bones"][f - rows[ti][1]:f - rows[ti][1] + 1]}, f)["version 22"][0]
+        X22 = lbs(pg.P, pg.ip, pg.wp, T22)
+        for XX in (X, X22):  # the walking cycle, then version 22 at the same frame
+            row.append(render(XX, pg.fp, np.zeros((len(XX), 2)), grey, "side", size=200))
+            row.append(render(XX, pg.fp, np.zeros((len(XX), 2)), grey, "front", size=200))
     worst[p] = [(int(f), float(ang[f])) for f in top]
     tiles.append(np.concatenate(row, 1))
 Image.fromarray((np.concatenate(tiles, 0) * 255).clip(0, 255).astype(np.uint8)).save(os.path.join(out, "g3_sheet.jpg"), quality=85)
